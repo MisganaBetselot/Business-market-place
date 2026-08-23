@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 
 from .models import Inquiry
 from .serializers import InquirySerializer
+from notifications.models import Notification
 
 
 class InquiryListCreateView(generics.ListCreateAPIView):
@@ -29,9 +30,18 @@ class InquiryListCreateView(generics.ListCreateAPIView):
                 {"detail": "You cannot send an inquiry to your own listing."}
             )
 
-        serializer.save(
+        inquiry = serializer.save(
             buyer=self.request.user,
             seller=listing.seller,
+        )
+
+        Notification.objects.create(
+            user=listing.seller,
+            type=Notification.NotificationType.NEW_INQUIRY,
+            message=(
+                f"You have received a new inquiry about "
+                f"{listing.business_name}."
+            ),
         )
 
 
