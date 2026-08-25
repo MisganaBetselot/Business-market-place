@@ -6,58 +6,81 @@ from .models import User
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    ordering = ("email",)
-    list_display = (
+    ordering = ["-created_at"]
+    list_display = [
         "email",
+        "first_name",
+        "last_name",
+        "phone",
         "is_admin",
-        "is_staff",
         "is_active",
+        "is_staff",
         "created_at",
-    )
-    search_fields = ("email",)
+    ]
+    search_fields = [
+        "email",
+        "first_name",
+        "last_name",
+        "phone",
+    ]
+    list_filter = [
+        "is_admin",
+        "is_active",
+        "is_staff",
+        "created_at",
+    ]
+    readonly_fields = [
+        "id",
+        "created_at",
+        "updated_at",
+    ]
 
     fieldsets = (
-        (None, {"fields": ("email", "password")}),
-        (
-            "Permissions",
-            {
-                "fields": (
-                    "is_admin",
-                    "is_staff",
-                    "is_active",
-                    "is_superuser",
-                    "groups",
-                    "user_permissions",
-                )
-            },
-        ),
-        (
-            "Important dates",
-            {
-                "fields": (
-                    "last_login",
-                    "created_at",
-                    "updated_at",
-                )
-            },
-        ),
+        ("Account", {
+            "fields": (
+                "id",
+                "email",
+                "password",
+            )
+        }),
+        ("Personal Information", {
+            "fields": (
+                "first_name",
+                "last_name",
+                "phone",
+            )
+        }),
+        ("Permissions", {
+            "fields": (
+                "is_admin",
+                "is_active",
+                "is_staff",
+                "is_superuser",
+                "groups",
+                "user_permissions",
+            )
+        }),
+        ("Dates", {
+            "fields": (
+                "created_at",
+                "updated_at",
+            )
+        }),
     )
 
-    readonly_fields = ("created_at", "updated_at", "last_login")
-
     add_fieldsets = (
-        (
-            None,
-            {
-                "classes": ("wide",),
-                "fields": (
-                    "email",
-                    "password1",
-                    "password2",
-                    "is_admin",
-                    "is_staff",
-                    "is_active",
-                ),
-            },
-        ),
+        (None, {
+            "classes": ("wide",),
+            "fields": (
+                "email",
+                "first_name",
+                "last_name",
+                "phone",
+                "password1",
+                "password2",
+                "is_admin",
+                "is_active",
+                "is_staff",
+            ),
+        }),
     )
