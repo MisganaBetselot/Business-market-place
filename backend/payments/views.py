@@ -4,6 +4,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from audit_logs.models import AuditLog
+
 from .models import PaymentReceipt
 from .serializers import PaymentReceiptSerializer
 
@@ -74,6 +76,17 @@ class PaymentReceiptApproveView(APIView):
         )
         subscription.save()
 
+        AuditLog.objects.create(
+    admin=request.user,
+    action="PAYMENT_RECEIPT_APPROVED",
+    target_type="PaymentReceipt",
+    target_id=str(receipt.id),
+    notes=(
+        f"Payment receipt approved. "
+        f"Subscription #{subscription.id} activated."
+    ),
+)
+
         return Response(
             {
                 "message": "Payment receipt approved successfully.",
@@ -127,6 +140,15 @@ class PaymentReceiptRejectView(APIView):
         subscription = receipt.subscription
         subscription.status = "REJECTED"
         subscription.save()
+
+        AuditLog.objects.create(
+    admin=request.user,
+    action="PAYMENT_RECEIPT_REJECTED",
+    target_type="PaymentReceipt",
+    target_id=str(receipt.id),
+    notes=f"Payment receipt rejected. Reason: {reason}",
+)
+
 
         return Response(
             {

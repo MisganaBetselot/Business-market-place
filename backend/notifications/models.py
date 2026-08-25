@@ -9,8 +9,15 @@ class Notification(models.Model):
         MEDIA_APPROVED = "MEDIA_APPROVED", "Media Approved"
         MEDIA_REJECTED = "MEDIA_REJECTED", "Media Rejected"
         NEW_INQUIRY = "NEW_INQUIRY", "New Inquiry"
-        SUBSCRIPTION_EXPIRING = "SUBSCRIPTION_EXPIRING", "Subscription Expiring"
-        SUBSCRIPTION_EXPIRED = "SUBSCRIPTION_EXPIRED", "Subscription Expired"
+        SUBSCRIPTION_EXPIRING = (
+            "SUBSCRIPTION_EXPIRING",
+            "Subscription Expiring",
+        )
+        SUBSCRIPTION_EXPIRED = (
+            "SUBSCRIPTION_EXPIRED",
+            "Subscription Expired",
+        )
+        REPORT_REVIEWED = "REPORT_REVIEWED", "Report Reviewed"
 
     id = models.BigAutoField(primary_key=True)
 

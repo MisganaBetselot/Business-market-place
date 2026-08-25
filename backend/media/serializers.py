@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import Media
@@ -60,10 +61,25 @@ class MediaSerializer(serializers.ModelSerializer):
                 "This subscription does not belong to you."
             )
 
+        # Make sure the subscription belongs to the listing's seller
+        if subscription.user != listing.seller:
+            raise serializers.ValidationError(
+                "This subscription does not belong to the listing's seller."
+            )
+
         # Subscription must be active
         if subscription.status != "ACTIVE":
             raise serializers.ValidationError(
                 "Your subscription must be ACTIVE to upload media."
+            )
+
+        # Subscription must not be expired
+        if (
+            subscription.expiry_date is not None
+            and subscription.expiry_date <= timezone.now()
+        ):
+            raise serializers.ValidationError(
+                "Your subscription has expired."
             )
 
         # Check media type against subscription plan

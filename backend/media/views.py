@@ -4,6 +4,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from audit_logs.models import AuditLog
+from notifications.models import Notification
+
 from .models import Media
 from .serializers import MediaSerializer
 
@@ -43,7 +46,10 @@ class MediaApproveView(APIView):
             )
 
         try:
-            media = Media.objects.get(pk=pk)
+            media = Media.objects.select_related(
+                "listing",
+                "listing__seller",
+            ).get(pk=pk)
         except Media.DoesNotExist:
             return Response(
                 {"detail": "Media not found."},
@@ -56,11 +62,29 @@ class MediaApproveView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        now = timezone.now()
+
         media.status = Media.Status.APPROVED
         media.reviewed_by = request.user
-        media.reviewed_at = timezone.now()
+        media.reviewed_at = now
         media.rejection_reason = None
         media.save()
+        AuditLog.objects.create(
+    admin=request.user,
+    action="MEDIA_APPROVED",
+    target_type="Media",
+    target_id=str(media.id),
+    notes=f"Media for {media.listing.business_name} approved.",
+)
+
+        Notification.objects.create(
+            user=media.listing.seller,
+            type=Notification.NotificationType.MEDIA_APPROVED,
+            message=(
+                f"Your media for {media.listing.business_name} "
+                "has been approved."
+            ),
+        )
 
         return Response(
             {
@@ -82,7 +106,10 @@ class MediaRejectView(APIView):
             )
 
         try:
-            media = Media.objects.get(pk=pk)
+            media = Media.objects.select_related(
+                "listing",
+                "listing__seller",
+            ).get(pk=pk)
         except Media.DoesNotExist:
             return Response(
                 {"detail": "Media not found."},
@@ -108,6 +135,26 @@ class MediaRejectView(APIView):
         media.reviewed_at = timezone.now()
         media.rejection_reason = reason
         media.save()
+
+        AuditLog.objects.create(
+    admin=request.user,
+    action="MEDIA_REJECTED",
+    target_type="Media",
+    target_id=str(media.id),
+    notes=(
+        f"Media for {media.listing.business_name} rejected. "
+        f"Reason: {reason}"
+    ),
+)
+
+        Notification.objects.create(
+            user=media.listing.seller,
+            type=Notification.NotificationType.MEDIA_REJECTED,
+            message=(
+                f"Your media for {media.listing.business_name} "
+                f"has been rejected. Reason: {reason}"
+            ),
+        )
 
         return Response(
             {

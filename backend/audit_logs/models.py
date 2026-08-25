@@ -15,7 +15,7 @@ class AuditLog(models.Model):
 
     target_type = models.CharField(max_length=100)
 
-    target_id = models.UUIDField()
+    target_id = models.CharField(max_length=100)
 
     notes = models.TextField(
         null=True,
