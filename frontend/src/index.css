@@ -1,1 +1,66 @@
 @import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&display=swap");
+
+/*
+  Business Marketplace — Design Tokens
+  -------------------------------------
+  Reference: sage/forest green + cream eco-kitchenware look (Musemind, via
+  Dribbble). Deep forest green for CTAs and headers, a softer sage for
+  gentle accents/badges, warm cream surfaces instead of stark white/gray.
+  Fraunces (with italic) for headings gives that editorial "Kitchenware"
+  treatment; Inter stays for body and dense admin screens.
+*/
+@theme {
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink: #1b2420;
+  --color-ink-soft: #55604f;
+
+  --color-surface: #ffffff;
+  --color-surface-muted: #f7f4ea;
+  --color-surface-sunken: #ece6d4;
+
+  --color-border: #e2dcc7;
+
+  /* Deep forest green — primary. Matches the hero-banner green in the ref. */
+  --color-brand-50: #eef2ea;
+  --color-brand-100: #d7e0cd;
+  --color-brand-400: #4c6b48;
+  --color-brand-500: #2f4a34;
+  --color-brand-600: #223a29;
+  --color-brand-700: #182a1e;
+
+  /* Soft sage — secondary accent, used for gentle badges/highlights
+     (like the mint "96%" chip in the reference). */
+  --color-sage-100: #e4e9d9;
+  --color-sage-400: #8fa07d;
+  --color-sage-500: #74875f;
+
+  /* Warm mustard/gold — used sparingly for promo/value accents. */
+  --color-gold-100: #f2e7cd;
+  --color-gold-400: #c1913f;
+  --color-gold-500: #a97a2f;
+
+  --color-success: #3f7a4e;
+  --color-warning: #c1913f;
+  --color-danger: #a8402f;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background-color: var(--color-surface-muted);
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+}
+
+/* Editorial italic accent — use on a key word or two in a headline,
+   the way the reference sets "Kitchenware" in italic. Don't italicize
+   a whole heading, just the word that should carry the emphasis. */
+.font-display-italic {
+  font-family: var(--font-display);
+  font-style: italic;
+}
