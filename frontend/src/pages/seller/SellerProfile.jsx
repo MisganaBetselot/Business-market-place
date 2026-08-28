@@ -4,7 +4,7 @@ import Button from "../../components/common/Button";
 import Input from "../../components/common/Input";
 import { Card, Badge } from "../../components/common/Card";
 
-export default function Profile() {
+export default function SellerProfile() {
   const { user, updateProfile } = useAuth();
   const [form, setForm] = useState(() => ({
     first_name: user?.first_name || "",
@@ -38,7 +38,7 @@ export default function Profile() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-6 flex items-center gap-3">
-        <h1 className="font-display text-2xl font-semibold">Your profile</h1>
+        <h1 className="font-display text-2xl font-semibold">Seller profile</h1>
         <Badge tone={user.is_admin ? "success" : "neutral"}>
           {user.is_admin ? "Admin" : "User"}
         </Badge>

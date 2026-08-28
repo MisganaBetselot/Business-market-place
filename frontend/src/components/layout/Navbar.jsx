@@ -1,5 +1,6 @@
 import { Link, NavLink } from "react-router-dom";
-import { useAuth } from "../../auth/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
+import { mockCategories } from "../../data/mockData";
 
 const navLinkClass = ({ isActive }) =>
   `text-sm font-medium transition-colors ${
@@ -7,59 +8,56 @@ const navLinkClass = ({ isActive }) =>
   }`;
 
 export default function Navbar() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-        <Link to="/" className="font-display text-lg font-semibold text-brand-600">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 gap-4">
+        <Link to="/" className="font-display text-lg font-semibold text-brand-600 shrink-0">
           Business Marketplace
         </Link>
 
-        {/* Browse/Favorites route to Dre & Muni's modules — links only, no
-            dependency on their components, so this shell renders standalone. */}
-        <nav className="hidden items-center gap-6 md:flex">
-          <NavLink to="/" className={navLinkClass} end>
+        <div className="hidden md:flex items-center gap-6">
+          <NavLink to="/search" className={navLinkClass} end>
             Browse
           </NavLink>
-          <NavLink to="/favorites" className={navLinkClass}>
-            Favorites
-          </NavLink>
-        </nav>
+          <div className="relative group">
+            <button className="text-sm font-medium text-ink-soft hover:text-ink flex items-center gap-1">
+              Categories ▾
+            </button>
+            <div className="absolute top-full left-0 mt-2 w-48 rounded-xl border border-border bg-surface shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+              {mockCategories.map((cat) => (
+                <Link
+                  key={cat.id}
+                  to={`/search?category=${cat.id}`}
+                  className="block px-4 py-2.5 text-sm text-ink hover:bg-surface-muted first:rounded-t-xl last:rounded-b-xl"
+                >
+                  {cat.icon} {cat.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
 
         <div className="flex items-center gap-3">
+          <Link
+            to="/messages"
+            className="hidden sm:flex items-center gap-1 text-sm font-medium text-ink-soft hover:text-ink"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            Messages
+          </Link>
+
           {isAuthenticated ? (
             <>
-              {/* Notifications bell: msgana owns the real dropdown component.
-                  This is a plain link placeholder so the navbar doesn't block
-                  on a component that isn't built yet — swap in
-                  <NotificationsBell /> here once it lands on main. */}
               <Link
-                to="/notifications"
-                aria-label="Notifications"
-                className="rounded-full p-2 text-ink-soft hover:bg-surface-sunken hover:text-ink"
+                to="/seller"
+                className="hidden sm:block text-sm font-medium text-ink-soft hover:text-ink"
               >
-                <BellIcon />
+                Dashboard
               </Link>
-
-              <Link
-                to="/account"
-                className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block"
-              >
-                {user?.full_name || "Account"}
-              </Link>
-
-              {/* Admin panel is msgana's module — this link just routes
-                  there for admins; it doesn't render anything from it. */}
-              {user?.is_admin && (
-                <Link
-                  to="/admin"
-                  className="rounded-lg bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-600 hover:bg-brand-100"
-                >
-                  Admin
-                </Link>
-              )}
-
               <button
                 onClick={logout}
                 className="text-sm font-medium text-ink-soft hover:text-danger"
@@ -83,14 +81,5 @@ export default function Navbar() {
         </div>
       </div>
     </header>
-  );
-}
-
-function BellIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../auth/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import Button from "../../components/common/Button";
 import Input from "../../components/common/Input";
 import { Card } from "../../components/common/Card";
@@ -9,7 +9,8 @@ export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    full_name: "",
+    first_name: "",
+    last_name: "",
     email: "",
     phone: "",
     password: "",
@@ -48,13 +49,22 @@ export default function Register() {
         </p>
 
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-          <Input
-            label="Full name"
-            name="full_name"
-            value={form.full_name}
-            onChange={handleChange}
-            required
-          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input
+              label="First name"
+              name="first_name"
+              value={form.first_name}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              label="Last name"
+              name="last_name"
+              value={form.last_name}
+              onChange={handleChange}
+              required
+            />
+          </div>
           <Input
             label="Email"
             type="email"

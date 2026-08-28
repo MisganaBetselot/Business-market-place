@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useAuth } from "../../auth/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import { Card, Badge } from "../../components/common/Card";
 
 /**
@@ -20,16 +20,19 @@ export default function Dashboard() {
     { to: "/seller", label: "Seller tools", blurb: "Manage your listings and subscriptions." },
   ];
 
+  const firstName = user?.first_name || "there";
+  const displayName = firstName.split(" ")[0];
+
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex items-center gap-3">
         <div>
           <h1 className="font-display text-2xl font-semibold">
-            Welcome back, {user.full_name?.split(" ")[0] || "there"}
+            Welcome back, {displayName}
           </h1>
           <p className="mt-1 text-sm text-ink-soft">{user.email}</p>
         </div>
-        <Badge tone={user.status === "ACTIVE" ? "success" : "danger"}>{user.status}</Badge>
+        <Badge tone={user.status === "ACTIVE" ? "success" : "danger"}>{user.status || "ACTIVE"}</Badge>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

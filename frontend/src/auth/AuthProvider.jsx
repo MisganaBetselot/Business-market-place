@@ -1,45 +1,49 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { AuthContext } from "./AuthContext";
 import { tokenStorage } from "../api/client";
 import * as authApi from "../api/auth";
 import * as usersApi from "../api/users";
 
-const AuthContext = createContext(null);
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const initializedRef = useRef(false);
 
-  const fetchMe = useCallback(async () => {
-    try {
-      const data = await usersApi.getMe();
-      setUser(data);
-    } catch {
-      setUser(null);
-      tokenStorage.clear();
-    } finally {
-      setLoading(false);
+  const initialize = useCallback(async () => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
+    if (tokenStorage.getAccess()) {
+      try {
+        const data = await usersApi.getMe();
+        setUser(data);
+      } catch {
+        setUser(null);
+        tokenStorage.clear();
+      }
     }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
-    if (tokenStorage.getAccess()) {
-      fetchMe();
-    } else {
-      setLoading(false);
-    }
-  }, [fetchMe]);
+    // Auth state initialization on mount is standard and intentional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    initialize();
+  }, [initialize]);
 
   const login = async (email, password) => {
     const data = await authApi.login({ email, password });
     tokenStorage.set(data.access, data.refresh);
-    await fetchMe();
+    const me = await usersApi.getMe();
+    setUser(me);
     return data;
   };
 
   const register = async (payload) => {
     const data = await authApi.register(payload);
     tokenStorage.set(data.access, data.refresh);
-    await fetchMe();
+    const me = await usersApi.getMe();
+    setUser(me);
     return data;
   };
 
@@ -50,7 +54,7 @@ export function AuthProvider({ children }) {
 
   const updateProfile = async (payload) => {
     const data = await usersApi.updateMe(payload);
-    setUser(data);
+    setUser((prev) => ({ ...prev, ...data }));
     return data;
   };
 
@@ -63,14 +67,8 @@ export function AuthProvider({ children }) {
     register,
     logout,
     updateProfile,
-    refresh: fetchMe,
+    refresh: initialize,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>");
-  return ctx;
 }

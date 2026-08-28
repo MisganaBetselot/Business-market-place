@@ -1,9 +1,13 @@
+import { RouterProvider } from "react-router-dom";
+import { AuthProvider } from "./auth/AuthProvider";
+import router from "./routes/AppRoutes";
+
 function App() {
   return (
-    <div className="text-3xl font-bold underline">
-      Business Marketplace
-    </div>
-  )
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  );
 }
 
-export default App
+export default App;
