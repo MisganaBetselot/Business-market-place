@@ -1,0 +1,1090 @@
+diff --git a/frontend/src/components/common/Button.jsx b/frontend/src/components/common/Button.jsx
+index 0e81df8..9e43754 100644
+--- a/frontend/src/components/common/Button.jsx
++++ b/frontend/src/components/common/Button.jsx
+@@ -1,32 +1,50 @@
+ const variants = {
+   primary:
+-    "bg-brand-500 text-white hover:bg-brand-600 focus-visible:outline-brand-500",
++    "bg-brand-500 text-white hover:bg-brand-600 focus-visible:outline-brand-500 shadow-sm hover:shadow-md hover:-translate-y-0.5",
+   secondary:
+-    "bg-white text-brand-600 border border-border hover:bg-surface-muted focus-visible:outline-brand-500",
++    "bg-white text-brand-600 border-2 border-brand-100 hover:border-brand-400 hover:-translate-y-0.5",
+   gold:
+-    "bg-gold-400 text-white hover:bg-gold-500 focus-visible:outline-gold-500",
++    "bg-gold-400 text-white hover:bg-gold-500 focus-visible:outline-gold-500 hover:-translate-y-0.5",
+   ghost:
+     "bg-transparent text-ink-soft hover:bg-surface-sunken focus-visible:outline-brand-500",
+   danger:
+     "bg-danger text-white hover:opacity-90 focus-visible:outline-danger",
+ };
+ 
++/**
++ * Shared button. Primary/secondary/gold lift slightly on hover instead of
++ * just swapping color, and primary gets a one-shot light "shine" sweep on
++ * hover so the main CTA on every page (login, sign up, save) feels alive
++ * without looping forever and becoming annoying.
++ */
+ export default function Button({
+   as: Tag = "button",
+   variant = "primary",
++  loading = false,
+   className = "",
+   children,
++  disabled,
+   ...props
+ }) {
+   return (
+     <Tag
+-      className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium
+-      transition-colors disabled:opacity-50 disabled:cursor-not-allowed
++      disabled={disabled || loading}
++      className={`group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-2.5 text-sm font-medium
++      transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none
+       focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
+       ${variants[variant]} ${className}`}
+       {...props}
+     >
+-      {children}
++      {variant === "primary" && !disabled && (
++        <span
++          aria-hidden="true"
++          className="pointer-events-none absolute inset-0 -translate-x-full bg-white/25 opacity-0 group-hover:opacity-100 group-hover:[animation:shine_0.9s_ease]"
++        />
++      )}
++      {loading && (
++        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
++      )}
++      <span className="relative">{children}</span>
+     </Tag>
+   );
+ }
+diff --git a/frontend/src/components/common/Card.jsx b/frontend/src/components/common/Card.jsx
+index df51e4e..95f6e54 100644
+--- a/frontend/src/components/common/Card.jsx
++++ b/frontend/src/components/common/Card.jsx
+@@ -1,7 +1,7 @@
+ export function Card({ className = "", children }) {
+   return (
+     <div
+-      className={`rounded-xl border border-border bg-surface p-5 shadow-sm ${className}`}
++      className={`rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow duration-200 ${className}`}
+     >
+       {children}
+     </div>
+@@ -12,7 +12,7 @@ const badgeTones = {
+   neutral: "bg-surface-sunken text-ink-soft",
+   brand: "bg-brand-50 text-brand-600",
+   gold: "bg-gold-100 text-gold-500",
+-  success: "bg-green-50 text-success",
++  success: "bg-brand-50 text-brand-600",
+   danger: "bg-red-50 text-danger",
+ };
+ 
+diff --git a/frontend/src/components/common/Input.jsx b/frontend/src/components/common/Input.jsx
+index 26109c5..6db63a7 100644
+--- a/frontend/src/components/common/Input.jsx
++++ b/frontend/src/components/common/Input.jsx
+@@ -1,20 +1,44 @@
+-export default function Input({ label, error, id, className = "", ...props }) {
+-  const inputId = id || props.name;
++import { useId, useState } from "react";
++
++/**
++ * Floating-label input. Label sits inside the field until you focus or
++ * type, then it lifts. The border on focus draws in from the label side
++ * rather than just changing color, so it reads as a deliberate motion,
++ * not a default browser ring.
++ */
++export default function Input({ label, error, id, className = "", value, onFocus, onBlur, ...props }) {
++  const autoId = useId();
++  const inputId = id || props.name || autoId;
++  const [focused, setFocused] = useState(false);
++  const hasValue = value !== undefined && value !== null && value !== "";
++  const floated = focused || hasValue;
++
+   return (
+     <div className="flex flex-col gap-1.5">
+-      {label && (
+-        <label htmlFor={inputId} className="text-sm font-medium text-ink-soft">
+-          {label}
+-        </label>
+-      )}
+-      <input
+-        id={inputId}
+-        className={`rounded-lg border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-soft/50
+-        focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400
+-        ${error ? "border-danger" : "border-border"} ${className}`}
+-        {...props}
+-      />
+-      {error && <span className="text-xs text-danger">{error}</span>}
++      <div className="relative">
++        <input
++          id={inputId}
++          value={value}
++          onFocus={(e) => { setFocused(true); onFocus?.(e); }}
++          onBlur={(e) => { setFocused(false); onBlur?.(e); }}
++          placeholder=" "
++          className={`peer w-full rounded-xl border-2 bg-white px-4 pt-5 pb-2 text-sm text-ink outline-none
++          transition-colors duration-200
++          ${error ? "border-danger" : focused ? "border-brand-500" : "border-border hover:border-brand-100"}
++          ${className}`}
++          {...props}
++        />
++        {label && (
++          <label
++            htmlFor={inputId}
++            className={`pointer-events-none absolute left-4 transition-all duration-200 ease-out
++            ${floated ? "top-1.5 text-[11px] font-medium text-brand-600" : "top-1/2 -translate-y-1/2 text-sm text-ink-soft"}`}
++          >
++            {label}
++          </label>
++        )}
++      </div>
++      {error && <span className="text-xs text-danger animate-fade-in">{error}</span>}
+     </div>
+   );
+ }
+diff --git a/frontend/src/components/common/LoadingSpinner.jsx b/frontend/src/components/common/LoadingSpinner.jsx
+index 4325074..fdbed8d 100644
+--- a/frontend/src/components/common/LoadingSpinner.jsx
++++ b/frontend/src/components/common/LoadingSpinner.jsx
+@@ -20,7 +20,7 @@ export default function LoadingSpinner({
+     <span
+       role="status"
+       aria-label={label || "Loading"}
+-      className={`inline-block animate-spin rounded-full border-brand-200 border-t-brand-500 ${sizes[size]} ${className}`}
++      className={`inline-block animate-spin rounded-full border-brand-100 border-t-brand-500 ${sizes[size]} ${className}`}
+     />
+   );
+ 
+diff --git a/frontend/src/components/layout/AuthLayout.jsx b/frontend/src/components/layout/AuthLayout.jsx
+new file mode 100644
+index 0000000..372e1c4
+--- /dev/null
++++ b/frontend/src/components/layout/AuthLayout.jsx
+@@ -0,0 +1,74 @@
++import { Link } from "react-router-dom";
++
++const points = [
++  { icon: "🤝", text: "Verified sellers and reviewed listings, so you're not guessing." },
++  { icon: "📍", text: "Businesses across Addis Ababa, from cafés to retail shops." },
++  { icon: "💬", text: "Message a seller directly once you've found the right fit." },
++];
++
++/**
++ * Shared shell for Login / Register / Reset password. Split screen instead
++ * of a lone centered card: form on the left (white, does the work), a
++ * sage panel on the right that actually says something about the
++ * marketplace instead of decorating for its own sake. Collapses to just
++ * the form on small screens.
++ */
++export default function AuthLayout({ eyebrow, title, subtitle, children }) {
++  return (
++    <div className="grid min-h-[calc(100vh-4rem)] grid-cols-1 lg:grid-cols-2">
++      {/* Form side */}
++      <div className="relative flex items-center justify-center overflow-hidden px-4 py-16 sm:px-8">
++        <div
++          aria-hidden="true"
++          className="animate-drift pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-sage-100 opacity-60 blur-3xl"
++        />
++        <div className="relative w-full max-w-sm animate-fade-up">
++          <Link to="/" className="mb-8 inline-block font-display text-lg font-semibold text-brand-600">
++            Business Marketplace
++          </Link>
++          {eyebrow && (
++            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-brand-500">
++              {eyebrow}
++            </p>
++          )}
++          <h1 className="font-display text-3xl font-semibold text-ink">{title}</h1>
++          {subtitle && <p className="mt-2 text-sm text-ink-soft">{subtitle}</p>}
++
++          <div className="mt-8">{children}</div>
++        </div>
++      </div>
++
++      {/* Sage showcase side */}
++      <div className="relative hidden overflow-hidden bg-gradient-to-br from-brand-600 to-brand-700 lg:flex lg:flex-col lg:justify-center lg:px-14 lg:py-16">
++        <div
++          aria-hidden="true"
++          className="animate-drift pointer-events-none absolute -right-16 top-10 h-80 w-80 rounded-full bg-brand-400/30 blur-3xl"
++        />
++        <div
++          aria-hidden="true"
++          className="animate-drift pointer-events-none absolute bottom-0 left-0 h-64 w-64 rounded-full bg-sage-400/20 blur-3xl"
++          style={{ animationDelay: "3s" }}
++        />
++
++        <div className="relative">
++          <p className="font-display text-2xl font-medium leading-snug text-white sm:text-3xl">
++            Buy and sell <span className="font-display-italic">established</span> businesses,
++            not just ideas.
++          </p>
++
++          <div className="mt-10 flex flex-col gap-5">
++            {points.map((p, i) => (
++              <div
++                key={p.text}
++                className={`flex items-start gap-3 animate-fade-up stagger-${i + 1}`}
++              >
++                <span className="text-xl leading-none">{p.icon}</span>
++                <p className="text-sm text-white/85">{p.text}</p>
++              </div>
++            ))}
++          </div>
++        </div>
++      </div>
++    </div>
++  );
++}
+diff --git a/frontend/src/components/layout/Footer.jsx b/frontend/src/components/layout/Footer.jsx
+index 8d0e265..5ee0c62 100644
+--- a/frontend/src/components/layout/Footer.jsx
++++ b/frontend/src/components/layout/Footer.jsx
+@@ -4,27 +4,27 @@ export default function Footer() {
+   const year = new Date().getFullYear();
+ 
+   return (
+-    <footer className="mt-16 border-t border-border bg-surface">
++    <footer className="mt-16 border-t border-border bg-surface-sunken">
+       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row sm:items-start sm:justify-between">
+         <div>
+           <p className="font-display text-base font-semibold text-brand-600">
+             Business Marketplace
+           </p>
+           <p className="mt-1 max-w-xs text-sm text-ink-soft">
+-            Buy and sell existing businesses — cafés, shops, salons, and more.
++            Buy and sell existing businesses, cafés, shops, salons, and more.
+           </p>
+         </div>
+ 
+         <div className="flex gap-10 text-sm">
+           <div className="flex flex-col gap-2">
+             <p className="font-medium text-ink">Marketplace</p>
+-            <Link to="/" className="text-ink-soft hover:text-ink">Browse businesses</Link>
+-            <Link to="/favorites" className="text-ink-soft hover:text-ink">Favorites</Link>
++            <Link to="/" className="text-ink-soft hover:text-brand-600 transition-colors">Browse businesses</Link>
++            <Link to="/favorites" className="text-ink-soft hover:text-brand-600 transition-colors">Favorites</Link>
+           </div>
+           <div className="flex flex-col gap-2">
+             <p className="font-medium text-ink">Account</p>
+-            <Link to="/login" className="text-ink-soft hover:text-ink">Log in</Link>
+-            <Link to="/register" className="text-ink-soft hover:text-ink">Sign up</Link>
++            <Link to="/login" className="text-ink-soft hover:text-brand-600 transition-colors">Log in</Link>
++            <Link to="/register" className="text-ink-soft hover:text-brand-600 transition-colors">Sign up</Link>
+           </div>
+         </div>
+       </div>
+diff --git a/frontend/src/components/layout/Navbar.jsx b/frontend/src/components/layout/Navbar.jsx
+index 73becc3..a31c58d 100644
+--- a/frontend/src/components/layout/Navbar.jsx
++++ b/frontend/src/components/layout/Navbar.jsx
+@@ -3,15 +3,17 @@ import { useAuth } from "../../hooks/useAuth";
+ import { mockCategories } from "../../data/mockData";
+ 
+ const navLinkClass = ({ isActive }) =>
+-  `text-sm font-medium transition-colors ${
+-    isActive ? "text-brand-600" : "text-ink-soft hover:text-ink"
++  `relative text-sm font-medium transition-colors after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:rounded-full after:bg-brand-500 after:transition-all after:duration-200 ${
++    isActive
++      ? "text-brand-600 after:w-full"
++      : "text-ink-soft hover:text-ink after:w-0 hover:after:w-full"
+   }`;
+ 
+ export default function Navbar() {
+   const { isAuthenticated, logout } = useAuth();
+ 
+   return (
+-    <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur">
++    <header className="sticky top-0 z-40 border-b border-border bg-white/90 backdrop-blur">
+       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 gap-4">
+         <Link to="/" className="font-display text-lg font-semibold text-brand-600 shrink-0">
+           Business Marketplace
+@@ -72,7 +74,7 @@ export default function Navbar() {
+               </Link>
+               <Link
+                 to="/register"
+-                className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
++                className="rounded-xl bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-600 hover:shadow-md"
+               >
+                 Sign up
+               </Link>
+diff --git a/frontend/src/components/layout/SiteLayout.jsx b/frontend/src/components/layout/SiteLayout.jsx
+index d9c3a21..1694e47 100644
+--- a/frontend/src/components/layout/SiteLayout.jsx
++++ b/frontend/src/components/layout/SiteLayout.jsx
+@@ -4,7 +4,7 @@ import Footer from "./Footer";
+ 
+ export default function SiteLayout() {
+   return (
+-    <div className="flex min-h-screen flex-col bg-surface-muted">
++    <div className="flex min-h-screen flex-col bg-white">
+       <Navbar />
+       <main className="flex-1">
+         <Outlet />
+diff --git a/frontend/src/index.css b/frontend/src/index.css
+index 914b6dd..123c223 100644
+--- a/frontend/src/index.css
++++ b/frontend/src/index.css
+@@ -2,64 +2,55 @@
+ @import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&display=swap");
+ 
+ /*
+-  Business Marketplace — Design Tokens
+-  -------------------------------------
+-  Reference: sage/forest green + cream eco-kitchenware look (Musemind, via
+-  Dribbble). Deep forest green for CTAs and headers, a softer sage for
+-  gentle accents/badges, warm cream surfaces instead of stark white/gray.
+-  Fraunces (with italic) for headings gives that editorial "Kitchenware"
+-  treatment; Inter stays for body and dense admin screens.
++  Business Marketplace — Design Tokens (v2)
++  -------------------------------------------
++  White surfaces, sage as the one confident accent, no beige/cream.
++  Fraunces for headings keeps the editorial feel; Inter for body/forms.
+ */
+ @theme {
+   --font-display: "Fraunces", ui-serif, Georgia, serif;
+   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+ 
+-  --color-ink: #1b2420;
+-  --color-ink-soft: #55604f;
++  --color-ink: #16201a;
++  --color-ink-soft: #5b6b5c;
+ 
+   --color-surface: #ffffff;
+-  --color-surface-muted: #f7f4ea;
+-  --color-surface-sunken: #ece6d4;
+-
+-  --color-border: #e2dcc7;
+-
+-  /* Deep forest green — primary. Matches the hero-banner green in the ref. */
+-  --color-brand-50: #eef2ea;
+-  --color-brand-100: #d7e0cd;
+-  --color-brand-400: #4c6b48;
+-  --color-brand-500: #2f4a34;
+-  --color-brand-600: #223a29;
+-  --color-brand-700: #182a1e;
+-
+-  /* Soft sage — secondary accent, used for gentle badges/highlights
+-     (like the mint "96%" chip in the reference). */
+-  --color-sage-100: #e4e9d9;
+-  --color-sage-400: #8fa07d;
+-  --color-sage-500: #74875f;
+-
+-  /* Warm mustard/gold — used sparingly for promo/value accents. */
++  --color-surface-muted: #ffffff;
++  --color-surface-sunken: #f2f7ee;
++
++  --color-border: #e3ebdd;
++
++  /* Sage — the one accent, used with confidence, not muted forest. */
++  --color-brand-50: #f1f7ec;
++  --color-brand-100: #dcedd0;
++  --color-brand-400: #7bad5e;
++  --color-brand-500: #4c8a37;
++  --color-brand-600: #3a6c2a;
++  --color-brand-700: #2a4f1e;
++
++  --color-sage-100: #e4efd9;
++  --color-sage-400: #8fc06f;
++  --color-sage-500: #6ba14c;
++
+   --color-gold-100: #f2e7cd;
+   --color-gold-400: #c1913f;
+   --color-gold-500: #a97a2f;
+ 
+   --color-success: #3f7a4e;
+   --color-warning: #c1913f;
+-  --color-danger: #a8402f;
++  --color-danger: #c0392b;
+ }
+ 
+ body {
+   font-family: var(--font-sans);
+   color: var(--color-ink);
+-  background-color: var(--color-surface-muted);
++  background-color: var(--color-surface);
+ }
+ 
+ h1, h2, h3, .font-display {
+   font-family: var(--font-display);
+ }
+ 
+-/* Editorial italic accent — use on a key word or two in a headline,
+-   the way the reference sets "Kitchenware" in italic. Don't italicize
+-   a whole heading, just the word that should carry the emphasis. */
+ .font-display-italic {
+   font-family: var(--font-display);
+   font-style: italic;
+@@ -85,4 +76,44 @@ h1, h2, h3, .font-display {
+   -webkit-line-clamp: 2;
+   -webkit-box-orient: vertical;
+   overflow: hidden;
+-}
+\ No newline at end of file
++}
++
++/* ---- Motion ---- */
++@keyframes fade-up {
++  from { opacity: 0; transform: translateY(10px); }
++  to { opacity: 1; transform: translateY(0); }
++}
++@keyframes fade-in {
++  from { opacity: 0; }
++  to { opacity: 1; }
++}
++@keyframes drift {
++  0%, 100% { transform: translate(0, 0) scale(1); }
++  33% { transform: translate(3%, -4%) scale(1.05); }
++  66% { transform: translate(-2%, 3%) scale(0.97); }
++}
++@keyframes shine {
++  from { transform: translateX(-120%) skewX(-15deg); }
++  to { transform: translateX(220%) skewX(-15deg); }
++}
++
++.animate-fade-up {
++  animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
++}
++.animate-fade-in {
++  animation: fade-in 0.6s ease both;
++}
++.animate-drift {
++  animation: drift 14s ease-in-out infinite;
++}
++
++.stagger-1 { animation-delay: 0.05s; }
++.stagger-2 { animation-delay: 0.12s; }
++.stagger-3 { animation-delay: 0.19s; }
++.stagger-4 { animation-delay: 0.26s; }
++
++@media (prefers-reduced-motion: reduce) {
++  .animate-fade-up, .animate-fade-in, .animate-drift {
++    animation: none !important;
++  }
++}
+diff --git a/frontend/src/pages/account/Dashboard.jsx b/frontend/src/pages/account/Dashboard.jsx
+index a0e0c04..6beb6dc 100644
+--- a/frontend/src/pages/account/Dashboard.jsx
++++ b/frontend/src/pages/account/Dashboard.jsx
+@@ -5,7 +5,7 @@ import { Card, Badge } from "../../components/common/Card";
+ /**
+  * Landing page after login — /account. Quick status + shortcuts into the
+  * other modules. The linked-to sections (listings, subscriptions,
+- * messaging, notifications) belong to Dre, Muni, and msgana — this page
++ * messaging, notifications) belong to Dre, Muni, and Misgana, this page
+  * only routes to them, it doesn't render their content.
+  */
+ export default function Dashboard() {
+@@ -14,18 +14,18 @@ export default function Dashboard() {
+   if (!user) return null;
+ 
+   const shortcuts = [
+-    { to: "/account/profile", label: "Edit profile", blurb: "Update your name, bio, and contact info." },
+-    { to: "/notifications", label: "Notifications", blurb: "See updates on your listings and receipts." },
+-    { to: "/favorites", label: "Favorites", blurb: "Businesses you've saved." },
+-    { to: "/seller", label: "Seller tools", blurb: "Manage your listings and subscriptions." },
++    { to: "/account/profile", label: "Edit profile", blurb: "Update your name, bio, and contact info.", icon: "👤" },
++    { to: "/notifications", label: "Notifications", blurb: "See updates on your listings and receipts.", icon: "🔔" },
++    { to: "/favorites", label: "Favorites", blurb: "Businesses you've saved.", icon: "❤️" },
++    { to: "/seller", label: "Seller tools", blurb: "Manage your listings and subscriptions.", icon: "🏪" },
+   ];
+ 
+   const firstName = user?.first_name || "there";
+   const displayName = firstName.split(" ")[0];
+ 
+   return (
+-    <div className="mx-auto max-w-3xl">
+-      <div className="mb-6 flex items-center gap-3">
++    <div className="mx-auto max-w-3xl px-4 py-12">
++      <div className="mb-8 flex items-center gap-3 animate-fade-up">
+         <div>
+           <h1 className="font-display text-2xl font-semibold">
+             Welcome back, {displayName}
+@@ -36,10 +36,11 @@ export default function Dashboard() {
+       </div>
+ 
+       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+-        {shortcuts.map((s) => (
+-          <Link key={s.to} to={s.to}>
+-            <Card className="h-full transition-shadow hover:shadow-md">
+-              <p className="font-medium text-ink">{s.label}</p>
++        {shortcuts.map((s, i) => (
++          <Link key={s.to} to={s.to} className={`animate-fade-up stagger-${i + 1}`}>
++            <Card className="group h-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-brand-200">
++              <span className="text-xl">{s.icon}</span>
++              <p className="mt-2 font-medium text-ink group-hover:text-brand-600 transition-colors">{s.label}</p>
+               <p className="mt-1 text-sm text-ink-soft">{s.blurb}</p>
+             </Card>
+           </Link>
+diff --git a/frontend/src/pages/account/Profile.jsx b/frontend/src/pages/account/Profile.jsx
+index d89e735..22e8cc7 100644
+--- a/frontend/src/pages/account/Profile.jsx
++++ b/frontend/src/pages/account/Profile.jsx
+@@ -27,7 +27,7 @@ export default function Profile() {
+       await updateProfile(form);
+       setSaved(true);
+     } catch (err) {
+-      setError(err.response?.data?.detail || "Couldn't save your changes — try again.");
++      setError(err.response?.data?.detail || "Couldn't save your changes, try again.");
+     } finally {
+       setSaving(false);
+     }
+@@ -35,29 +35,41 @@ export default function Profile() {
+ 
+   if (!user) return null;
+ 
++  const initials = `${user.first_name?.[0] || ""}${user.last_name?.[0] || ""}`.toUpperCase() || "U";
++
+   return (
+-    <div className="mx-auto max-w-2xl">
+-      <div className="mb-6 flex items-center gap-3">
+-        <h1 className="font-display text-2xl font-semibold">Your profile</h1>
+-        <Badge tone={user.is_admin ? "success" : "neutral"}>
+-          {user.is_admin ? "Admin" : "User"}
+-        </Badge>
++    <div className="mx-auto max-w-2xl px-4 py-12">
++      <div className="mb-6 flex items-center gap-4 animate-fade-up">
++        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 font-display text-lg font-semibold text-white shadow-sm">
++          {initials}
++        </div>
++        <div>
++          <div className="flex items-center gap-2">
++            <h1 className="font-display text-2xl font-semibold">Your profile</h1>
++            <Badge tone={user.is_admin ? "success" : "neutral"}>
++              {user.is_admin ? "Admin" : "User"}
++            </Badge>
++          </div>
++          <p className="text-sm text-ink-soft">{user.email}</p>
++        </div>
+       </div>
+ 
+-      <Card>
++      <Card className="animate-fade-up stagger-1">
+         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+-          <Input
+-            label="First name"
+-            name="first_name"
+-            value={form.first_name}
+-            onChange={handleChange}
+-          />
+-          <Input
+-            label="Last name"
+-            name="last_name"
+-            value={form.last_name}
+-            onChange={handleChange}
+-          />
++          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
++            <Input
++              label="First name"
++              name="first_name"
++              value={form.first_name}
++              onChange={handleChange}
++            />
++            <Input
++              label="Last name"
++              name="last_name"
++              value={form.last_name}
++              onChange={handleChange}
++            />
++          </div>
+           <Input label="Email" value={user.email} disabled />
+           <Input
+             label="Phone (optional)"
+@@ -66,13 +78,13 @@ export default function Profile() {
+             onChange={handleChange}
+           />
+ 
+-          {error && <p className="text-sm text-danger">{error}</p>}
++          {error && <p className="text-sm text-danger animate-fade-in">{error}</p>}
+ 
+           <div className="mt-2 flex items-center gap-3">
+-            <Button type="submit" disabled={saving}>
++            <Button type="submit" loading={saving}>
+               {saving ? "Saving…" : "Save changes"}
+             </Button>
+-            {saved && <span className="text-sm text-success">Saved.</span>}
++            {saved && <span className="text-sm text-brand-600 animate-fade-in">Saved.</span>}
+           </div>
+         </form>
+       </Card>
+diff --git a/frontend/src/pages/public/Login.jsx b/frontend/src/pages/public/Login.jsx
+index 4a17b42..6d79a99 100644
+--- a/frontend/src/pages/public/Login.jsx
++++ b/frontend/src/pages/public/Login.jsx
+@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
+ import { useAuth } from "../../hooks/useAuth";
+ import Button from "../../components/common/Button";
+ import Input from "../../components/common/Input";
+-import { Card } from "../../components/common/Card";
++import AuthLayout from "../../components/layout/AuthLayout";
+ 
+ export default function Login() {
+   const { login } = useAuth();
+@@ -26,7 +26,7 @@ export default function Login() {
+       navigate(redirectTo, { replace: true });
+     } catch (err) {
+       setError(
+-        err.response?.data?.detail || "Couldn't log you in — check your email and password."
++        err.response?.data?.detail || "Couldn't log you in, check your email and password."
+       );
+     } finally {
+       setSubmitting(false);
+@@ -34,53 +34,50 @@ export default function Login() {
+   };
+ 
+   return (
+-    <div className="mx-auto flex max-w-md flex-col items-center px-4 py-16">
+-      <Card className="w-full">
+-        <h1 className="font-display text-2xl font-semibold text-ink">Log in</h1>
+-        <p className="mt-1 text-sm text-ink-soft">
+-          Welcome back to Business Marketplace.
+-        </p>
++    <AuthLayout
++      eyebrow="Welcome back"
++      title="Log in"
++      subtitle="Pick up where you left off."
++    >
++      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
++        <Input
++          label="Email"
++          type="email"
++          name="email"
++          autoComplete="email"
++          value={form.email}
++          onChange={handleChange}
++          required
++        />
++        <Input
++          label="Password"
++          type="password"
++          name="password"
++          autoComplete="current-password"
++          value={form.password}
++          onChange={handleChange}
++          required
++        />
+ 
+-        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+-          <Input
+-            label="Email"
+-            type="email"
+-            name="email"
+-            autoComplete="email"
+-            value={form.email}
+-            onChange={handleChange}
+-            required
+-          />
+-          <Input
+-            label="Password"
+-            type="password"
+-            name="password"
+-            autoComplete="current-password"
+-            value={form.password}
+-            onChange={handleChange}
+-            required
+-          />
+-
+-          <div className="flex justify-end">
+-            <Link to="/reset-password" className="text-xs font-medium text-brand-600 hover:underline">
+-              Forgot your password?
+-            </Link>
+-          </div>
++        <div className="flex justify-end">
++          <Link to="/reset-password" className="text-xs font-medium text-brand-600 hover:underline">
++            Forgot your password?
++          </Link>
++        </div>
+ 
+-          {error && <p className="text-sm text-danger">{error}</p>}
++        {error && <p className="text-sm text-danger animate-fade-in">{error}</p>}
+ 
+-          <Button type="submit" disabled={submitting} className="mt-2 w-full">
+-            {submitting ? "Logging in…" : "Log in"}
+-          </Button>
+-        </form>
++        <Button type="submit" loading={submitting} className="mt-2 w-full">
++          {submitting ? "Logging in…" : "Log in"}
++        </Button>
++      </form>
+ 
+-        <p className="mt-6 text-center text-sm text-ink-soft">
+-          Don't have an account?{" "}
+-          <Link to="/register" className="font-medium text-brand-600 hover:underline">
+-            Sign up
+-          </Link>
+-        </p>
+-      </Card>
+-    </div>
++      <p className="mt-6 text-center text-sm text-ink-soft">
++        Don't have an account?{" "}
++        <Link to="/register" className="font-medium text-brand-600 hover:underline">
++          Sign up
++        </Link>
++      </p>
++    </AuthLayout>
+   );
+ }
+diff --git a/frontend/src/pages/public/Register.jsx b/frontend/src/pages/public/Register.jsx
+index 42898a8..c84a0ed 100644
+--- a/frontend/src/pages/public/Register.jsx
++++ b/frontend/src/pages/public/Register.jsx
+@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
+ import { useAuth } from "../../hooks/useAuth";
+ import Button from "../../components/common/Button";
+ import Input from "../../components/common/Input";
+-import { Card } from "../../components/common/Card";
++import AuthLayout from "../../components/layout/AuthLayout";
+ 
+ export default function Register() {
+   const { register } = useAuth();
+@@ -31,7 +31,7 @@ export default function Register() {
+     } catch (err) {
+       setError(
+         err.response?.data?.detail ||
+-          "Couldn't create your account — please check the details and try again."
++          "Couldn't create your account, check the details and try again."
+       );
+     } finally {
+       setSubmitting(false);
+@@ -39,71 +39,66 @@ export default function Register() {
+   };
+ 
+   return (
+-    <div className="mx-auto flex max-w-md flex-col items-center px-4 py-16">
+-      <Card className="w-full">
+-        <h1 className="font-display text-2xl font-semibold text-ink">
+-          Create your account
+-        </h1>
+-        <p className="mt-1 text-sm text-ink-soft">
+-          One account for browsing, buying, and selling.
+-        </p>
+-
+-        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+-            <Input
+-              label="First name"
+-              name="first_name"
+-              value={form.first_name}
+-              onChange={handleChange}
+-              required
+-            />
+-            <Input
+-              label="Last name"
+-              name="last_name"
+-              value={form.last_name}
+-              onChange={handleChange}
+-              required
+-            />
+-          </div>
++    <AuthLayout
++      eyebrow="Get started"
++      title="Create your account"
++      subtitle="One account for browsing, buying, and selling."
++    >
++      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
++        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+           <Input
+-            label="Email"
+-            type="email"
+-            name="email"
+-            autoComplete="email"
+-            value={form.email}
++            label="First name"
++            name="first_name"
++            value={form.first_name}
+             onChange={handleChange}
+             required
+           />
+           <Input
+-            label="Phone (optional)"
+-            name="phone"
+-            value={form.phone}
+-            onChange={handleChange}
+-          />
+-          <Input
+-            label="Password"
+-            type="password"
+-            name="password"
+-            autoComplete="new-password"
+-            value={form.password}
++            label="Last name"
++            name="last_name"
++            value={form.last_name}
+             onChange={handleChange}
+             required
+           />
++        </div>
++        <Input
++          label="Email"
++          type="email"
++          name="email"
++          autoComplete="email"
++          value={form.email}
++          onChange={handleChange}
++          required
++        />
++        <Input
++          label="Phone (optional)"
++          name="phone"
++          value={form.phone}
++          onChange={handleChange}
++        />
++        <Input
++          label="Password"
++          type="password"
++          name="password"
++          autoComplete="new-password"
++          value={form.password}
++          onChange={handleChange}
++          required
++        />
+ 
+-          {error && <p className="text-sm text-danger">{error}</p>}
++        {error && <p className="text-sm text-danger animate-fade-in">{error}</p>}
+ 
+-          <Button type="submit" disabled={submitting} className="mt-2 w-full">
+-            {submitting ? "Creating account…" : "Sign up"}
+-          </Button>
+-        </form>
++        <Button type="submit" loading={submitting} className="mt-2 w-full">
++          {submitting ? "Creating account…" : "Sign up"}
++        </Button>
++      </form>
+ 
+-        <p className="mt-6 text-center text-sm text-ink-soft">
+-          Already have an account?{" "}
+-          <Link to="/login" className="font-medium text-brand-600 hover:underline">
+-            Log in
+-          </Link>
+-        </p>
+-      </Card>
+-    </div>
++      <p className="mt-6 text-center text-sm text-ink-soft">
++        Already have an account?{" "}
++        <Link to="/login" className="font-medium text-brand-600 hover:underline">
++          Log in
++        </Link>
++      </p>
++    </AuthLayout>
+   );
+ }
+diff --git a/frontend/src/pages/public/ResetPassword.jsx b/frontend/src/pages/public/ResetPassword.jsx
+index 824a7fe..205f7b2 100644
+--- a/frontend/src/pages/public/ResetPassword.jsx
++++ b/frontend/src/pages/public/ResetPassword.jsx
+@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
+ import * as authApi from "../../api/auth";
+ import Button from "../../components/common/Button";
+ import Input from "../../components/common/Input";
+-import { Card } from "../../components/common/Card";
++import AuthLayout from "../../components/layout/AuthLayout";
+ 
+ /**
+  * Two steps in one page:
+@@ -11,7 +11,7 @@ import { Card } from "../../components/common/Card";
+  *  2. ?uid=..&token=..     -> the link from that email, set a new password.
+  *
+  * NOTE: /auth/password-reset/ and /auth/password-reset/confirm/ are not
+- * documented in the backend progress report yet — confirm the real paths
++ * documented in the backend progress report yet, confirm the real paths
+  * and payload shape with the backend dev before this goes live.
+  */
+ export default function ResetPassword() {
+@@ -21,15 +21,13 @@ export default function ResetPassword() {
+   const isConfirmStep = Boolean(uid && token);
+ 
+   return (
+-    <div className="mx-auto flex max-w-md flex-col items-center px-4 py-16">
+-      <Card className="w-full">
+-        {isConfirmStep ? (
+-          <ConfirmStep uid={uid} token={token} />
+-        ) : (
+-          <RequestStep />
+-        )}
+-      </Card>
+-    </div>
++    <AuthLayout
++      eyebrow="Account recovery"
++      title={isConfirmStep ? "Choose a new password" : "Reset your password"}
++      subtitle={isConfirmStep ? undefined : "Enter your email and we'll send you a link to reset it."}
++    >
++      {isConfirmStep ? <ConfirmStep uid={uid} token={token} /> : <RequestStep />}
++    </AuthLayout>
+   );
+ }
+ 
+@@ -46,57 +44,49 @@ function RequestStep() {
+       await authApi.requestPasswordReset(email);
+       setStatus("sent");
+     } catch (err) {
+-      setError(err.response?.data?.detail || "Couldn't send the reset email — try again.");
++      setError(err.response?.data?.detail || "Couldn't send the reset email, try again.");
+       setStatus("error");
+     }
+   };
+ 
+   if (status === "sent") {
+     return (
+-      <>
+-        <h1 className="font-display text-2xl font-semibold text-ink">Check your email</h1>
+-        <p className="mt-2 text-sm text-ink-soft">
+-          If an account exists for <strong>{email}</strong>, we've sent a link to reset
+-          your password.
++      <div className="animate-fade-up">
++        <p className="text-sm text-ink-soft">
++          If an account exists for <strong className="text-ink">{email}</strong>, we've sent a
++          link to reset your password.
+         </p>
+         <Link to="/login" className="mt-6 inline-block text-sm font-medium text-brand-600 hover:underline">
+           Back to log in
+         </Link>
+-      </>
++      </div>
+     );
+   }
+ 
+   return (
+-    <>
+-      <h1 className="font-display text-2xl font-semibold text-ink">Reset your password</h1>
+-      <p className="mt-1 text-sm text-ink-soft">
+-        Enter your email and we'll send you a link to reset it.
+-      </p>
+-
+-      <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+-        <Input
+-          label="Email"
+-          type="email"
+-          name="email"
+-          autoComplete="email"
+-          value={email}
+-          onChange={(e) => setEmail(e.target.value)}
+-          required
+-        />
+-
+-        {error && <p className="text-sm text-danger">{error}</p>}
+-
+-        <Button type="submit" disabled={status === "submitting"} className="mt-2 w-full">
+-          {status === "submitting" ? "Sending…" : "Send reset link"}
+-        </Button>
+-      </form>
+-
+-      <p className="mt-6 text-center text-sm text-ink-soft">
++    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
++      <Input
++        label="Email"
++        type="email"
++        name="email"
++        autoComplete="email"
++        value={email}
++        onChange={(e) => setEmail(e.target.value)}
++        required
++      />
++
++      {error && <p className="text-sm text-danger animate-fade-in">{error}</p>}
++
++      <Button type="submit" loading={status === "submitting"} className="mt-2 w-full">
++        {status === "submitting" ? "Sending…" : "Send reset link"}
++      </Button>
++
++      <p className="mt-2 text-center text-sm text-ink-soft">
+         <Link to="/login" className="font-medium text-brand-600 hover:underline">
+           Back to log in
+         </Link>
+       </p>
+-    </>
++    </form>
+   );
+ }
+ 
+@@ -121,7 +111,7 @@ function ConfirmStep({ uid, token }) {
+       setStatus("done");
+     } catch (err) {
+       setError(
+-        err.response?.data?.detail || "That reset link may have expired — request a new one."
++        err.response?.data?.detail || "That reset link may have expired, request a new one."
+       );
+       setStatus("error");
+     }
+@@ -129,49 +119,41 @@ function ConfirmStep({ uid, token }) {
+ 
+   if (status === "done") {
+     return (
+-      <>
+-        <h1 className="font-display text-2xl font-semibold text-ink">Password updated</h1>
+-        <p className="mt-2 text-sm text-ink-soft">You can now log in with your new password.</p>
+-        <Link
+-          to="/login"
+-          className="mt-6 inline-block rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600"
+-        >
+-          Log in
++      <div className="animate-fade-up">
++        <p className="text-sm text-ink-soft">You can now log in with your new password.</p>
++        <Link to="/login" className="mt-6 inline-block">
++          <Button>Log in</Button>
+         </Link>
+-      </>
++      </div>
+     );
+   }
+ 
+   return (
+-    <>
+-      <h1 className="font-display text-2xl font-semibold text-ink">Choose a new password</h1>
+-
+-      <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+-        <Input
+-          label="New password"
+-          type="password"
+-          name="password"
+-          autoComplete="new-password"
+-          value={form.password}
+-          onChange={handleChange}
+-          required
+-        />
+-        <Input
+-          label="Confirm new password"
+-          type="password"
+-          name="confirmPassword"
+-          autoComplete="new-password"
+-          value={form.confirmPassword}
+-          onChange={handleChange}
+-          required
+-        />
+-
+-        {error && <p className="text-sm text-danger">{error}</p>}
+-
+-        <Button type="submit" disabled={status === "submitting"} className="mt-2 w-full">
+-          {status === "submitting" ? "Saving…" : "Set new password"}
+-        </Button>
+-      </form>
+-    </>
++    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
++      <Input
++        label="New password"
++        type="password"
++        name="password"
++        autoComplete="new-password"
++        value={form.password}
++        onChange={handleChange}
++        required
++      />
++      <Input
++        label="Confirm new password"
++        type="password"
++        name="confirmPassword"
++        autoComplete="new-password"
++        value={form.confirmPassword}
++        onChange={handleChange}
++        required
++      />
++
++      {error && <p className="text-sm text-danger animate-fade-in">{error}</p>}
++
++      <Button type="submit" loading={status === "submitting"} className="mt-2 w-full">
++        {status === "submitting" ? "Saving…" : "Set new password"}
++      </Button>
++    </form>
+   );
+ }
