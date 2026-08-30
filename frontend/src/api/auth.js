@@ -26,3 +26,16 @@ export function confirmPasswordReset({ uid, token, password }) {
     .post("/users/password-reset/confirm/", { uid, token, password })
     .then((r) => r.data);
 }
+
+/**
+ * NOT LIVE YET. There's no /users/google/ endpoint on the backend, and no
+ * Google Cloud OAuth client configured for this app, so this call will
+ * 404 until both of those exist. The shape here (send the Google ID
+ * token, get back our own access/refresh pair) matches how the rest of
+ * this file talks to the backend, so whoever adds the endpoint just
+ * needs to verify the token server-side and return the same
+ * { access, refresh } shape as login().
+ */
+export function loginWithGoogle(googleIdToken) {
+  return api.post("/users/google/", { id_token: googleIdToken }).then((r) => r.data);
+}

@@ -1,7 +1,7 @@
 export function Card({ className = "", children }) {
   return (
     <div
-      className={`rounded-xl border border-border bg-surface p-5 shadow-sm ${className}`}
+      className={`rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow duration-200 ${className}`}
     >
       {children}
     </div>
@@ -12,7 +12,7 @@ const badgeTones = {
   neutral: "bg-surface-sunken text-ink-soft",
   brand: "bg-brand-50 text-brand-600",
   gold: "bg-gold-100 text-gold-500",
-  success: "bg-green-50 text-success",
+  success: "bg-brand-50 text-brand-600",
   danger: "bg-red-50 text-danger",
 };
 

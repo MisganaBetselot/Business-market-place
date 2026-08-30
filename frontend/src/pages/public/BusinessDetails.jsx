@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
+import { Phone } from "lucide-react";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import Button from "../../components/common/Button";
 import { getListing } from "../../api/listings";
@@ -138,7 +139,15 @@ export default function BusinessDetails() {
             <div className="mt-2 flex flex-col gap-1 text-sm text-ink-soft">
               <span>{listing.seller || listing.sellerName || "Private Seller"}</span>
               <span>{listing.location || "Location N/A"}</span>
-              <span>{listing.contact || ""}</span>
+              {listing.contact && (
+                <a
+                  href={`tel:${listing.contact.replace(/[^\d+]/g, "")}`}
+                  className="flex w-fit items-center gap-1.5 font-medium text-brand-600 hover:underline"
+                >
+                  <Phone className="h-3.5 w-3.5" strokeWidth={1.75} />
+                  {listing.contact}
+                </a>
+              )}
             </div>
           </div>
 

@@ -27,7 +27,7 @@ export default function Profile() {
       await updateProfile(form);
       setSaved(true);
     } catch (err) {
-      setError(err.response?.data?.detail || "Couldn't save your changes — try again.");
+      setError(err.response?.data?.detail || "Couldn't save your changes, try again.");
     } finally {
       setSaving(false);
     }
@@ -35,29 +35,41 @@ export default function Profile() {
 
   if (!user) return null;
 
+  const initials = `${user.first_name?.[0] || ""}${user.last_name?.[0] || ""}`.toUpperCase() || "U";
+
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-6 flex items-center gap-3">
-        <h1 className="font-display text-2xl font-semibold">Your profile</h1>
-        <Badge tone={user.is_admin ? "success" : "neutral"}>
-          {user.is_admin ? "Admin" : "User"}
-        </Badge>
+    <div className="mx-auto max-w-2xl px-4 py-12">
+      <div className="mb-6 flex items-center gap-4 animate-fade-up">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 font-display text-lg font-semibold text-white shadow-sm">
+          {initials}
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="font-display text-2xl font-semibold">Your profile</h1>
+            <Badge tone={user.is_admin ? "success" : "neutral"}>
+              {user.is_admin ? "Admin" : "User"}
+            </Badge>
+          </div>
+          <p className="text-sm text-ink-soft">{user.email}</p>
+        </div>
       </div>
 
-      <Card>
+      <Card className="animate-fade-up stagger-1">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input
-            label="First name"
-            name="first_name"
-            value={form.first_name}
-            onChange={handleChange}
-          />
-          <Input
-            label="Last name"
-            name="last_name"
-            value={form.last_name}
-            onChange={handleChange}
-          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input
+              label="First name"
+              name="first_name"
+              value={form.first_name}
+              onChange={handleChange}
+            />
+            <Input
+              label="Last name"
+              name="last_name"
+              value={form.last_name}
+              onChange={handleChange}
+            />
+          </div>
           <Input label="Email" value={user.email} disabled />
           <Input
             label="Phone (optional)"
@@ -66,13 +78,13 @@ export default function Profile() {
             onChange={handleChange}
           />
 
-          {error && <p className="text-sm text-danger">{error}</p>}
+          {error && <p className="text-sm text-danger animate-fade-in">{error}</p>}
 
           <div className="mt-2 flex items-center gap-3">
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" loading={saving}>
               {saving ? "Saving…" : "Save changes"}
             </Button>
-            {saved && <span className="text-sm text-success">Saved.</span>}
+            {saved && <span className="text-sm text-brand-600 animate-fade-in">Saved.</span>}
           </div>
         </form>
       </Card>

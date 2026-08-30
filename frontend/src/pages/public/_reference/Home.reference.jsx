@@ -1,12 +1,20 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ShieldCheck, MessageSquare, Handshake } from "lucide-react";
-import Button from "../../components/common/Button";
-import SearchBar from "../../components/marketplace/SearchBar";
-import CategoryCard from "../../components/marketplace/CategoryCard";
-import ListingCard from "../../components/marketplace/ListingCard";
-import PhotoSlideshow from "../../components/layout/PhotoSlideshow";
-import { mockCategories, mockListings } from "../../data/mockData";
+import { Handshake, ShieldCheck, MessageSquare } from "lucide-react";
+import Button from "../../../components/common/Button";
+import SearchBar from "../../../components/marketplace/SearchBar";
+import CategoryCardReference from "../../../components/marketplace/CategoryCard.reference";
+import ListingCard from "../../../components/marketplace/ListingCard";
+import PhotoSlideshow from "../../../components/layout/PhotoSlideshow";
+import { mockCategories, mockListings } from "../../../data/mockData";
+
+/**
+ * REFERENCE ONLY. This is a proposal for what Home.jsx could look like,
+ * built to show Dre, not merged into the real routes and not to be
+ * pushed to main until Dre has seen it and signed off. It reuses the
+ * real SearchBar, CategoryCard, and ListingCard components as-is so
+ * whatever Dre keeps still works against the real API once it's wired.
+ */
 
 const heroPhotos = [
   "https://images.unsplash.com/photo-1575663620136-5ebbfcc2c597?auto=format&fit=crop&w=1600&q=80",
@@ -20,7 +28,7 @@ const whyUs = [
   { Icon: Handshake, title: "Trade with confidence", text: "See real business details before you commit to a deal." },
 ];
 
-export default function Home() {
+export default function HomeReference() {
   const [query, setQuery] = useState("");
   const featured = mockListings.slice(0, 8);
 
@@ -32,9 +40,9 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-brand-700/90 via-brand-700/70 to-white" />
 
         <div className="relative mx-auto max-w-6xl px-4 py-16 md:py-24">
-          <div className="mx-auto max-w-2xl animate-fade-up text-center">
+          <div className="mx-auto max-w-2xl text-center">
             <h1 className="font-display text-3xl font-semibold text-white md:text-4xl">
-              Buy & Sell <span className="font-display-italic">Established</span> Businesses
+              Buy and sell <span className="font-display-italic">established</span> businesses
               in Ethiopia
             </h1>
             <p className="mt-3 text-sm text-white/85 md:text-base">
@@ -42,7 +50,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="mx-auto mt-8 max-w-2xl animate-fade-up stagger-1">
+          <div className="mx-auto mt-8 max-w-2xl">
             <SearchBar
               value={query}
               onChange={setQuery}
@@ -53,7 +61,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Category strip, icons + photos, no emoji */}
+      {/* Category strip */}
       <section className="mx-auto max-w-6xl px-4 py-10">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-display text-xl font-semibold text-ink">Browse by category</h2>
@@ -63,7 +71,7 @@ export default function Home() {
         </div>
         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
           {mockCategories.map((cat) => (
-            <CategoryCard key={cat.id} category={cat} />
+            <CategoryCardReference key={cat.id} category={cat} />
           ))}
         </div>
       </section>
@@ -91,22 +99,17 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Why Addis Gebeya, tinted section so the page isn't all white */}
-      <section className="bg-surface-sunken py-10">
-        <div className="mx-auto max-w-6xl px-4">
-          <h2 className="mb-6 font-display text-xl font-semibold text-ink">Why Addis Gebeya</h2>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            {whyUs.map((w, i) => (
-              <div
-                key={w.title}
-                className={`rounded-xl border border-border bg-white p-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm animate-fade-up stagger-${i + 1}`}
-              >
-                <w.Icon className="h-6 w-6 text-brand-500" strokeWidth={1.75} />
-                <h3 className="mt-3 font-display text-lg font-semibold text-ink">{w.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-ink-soft">{w.text}</p>
-              </div>
-            ))}
-          </div>
+      {/* Why Addis Gebeya */}
+      <section className="mx-auto max-w-6xl px-4 py-10">
+        <h2 className="mb-6 font-display text-xl font-semibold text-ink">Why Addis Gebeya</h2>
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          {whyUs.map((w) => (
+            <div key={w.title} className="rounded-xl border border-border bg-white p-6">
+              <w.Icon className="h-6 w-6 text-brand-500" strokeWidth={1.75} />
+              <h3 className="mt-3 font-display text-lg font-semibold text-ink">{w.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-ink-soft">{w.text}</p>
+            </div>
+          ))}
         </div>
       </section>
 

@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import Button from "../../components/common/Button";
 import Input from "../../components/common/Input";
-import { Card } from "../../components/common/Card";
+import GoogleButton from "../../components/common/GoogleButton";
+import AuthLayout from "../../components/layout/AuthLayout";
 
 export default function Register() {
   const { register } = useAuth();
@@ -31,7 +32,7 @@ export default function Register() {
     } catch (err) {
       setError(
         err.response?.data?.detail ||
-          "Couldn't create your account — please check the details and try again."
+          "Couldn't create your account, check the details and try again."
       );
     } finally {
       setSubmitting(false);
@@ -39,71 +40,77 @@ export default function Register() {
   };
 
   return (
-    <div className="mx-auto flex max-w-md flex-col items-center px-4 py-16">
-      <Card className="w-full">
-        <h1 className="font-display text-2xl font-semibold text-ink">
-          Create your account
-        </h1>
-        <p className="mt-1 text-sm text-ink-soft">
-          One account for browsing, buying, and selling.
-        </p>
+    <AuthLayout
+      eyebrow="Get started"
+      title="Create your account"
+      subtitle="One account for browsing, buying, and selling."
+    >
+      <GoogleButton
+        label="Sign up with Google"
+        onSuccess={() => navigate("/", { replace: true })}
+      />
 
-        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input
-              label="First name"
-              name="first_name"
-              value={form.first_name}
-              onChange={handleChange}
-              required
-            />
-            <Input
-              label="Last name"
-              name="last_name"
-              value={form.last_name}
-              onChange={handleChange}
-              required
-            />
-          </div>
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs font-medium text-ink-soft">or</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
-            label="Email"
-            type="email"
-            name="email"
-            autoComplete="email"
-            value={form.email}
+            label="First name"
+            name="first_name"
+            value={form.first_name}
             onChange={handleChange}
             required
           />
           <Input
-            label="Phone (optional)"
-            name="phone"
-            value={form.phone}
-            onChange={handleChange}
-          />
-          <Input
-            label="Password"
-            type="password"
-            name="password"
-            autoComplete="new-password"
-            value={form.password}
+            label="Last name"
+            name="last_name"
+            value={form.last_name}
             onChange={handleChange}
             required
           />
+        </div>
+        <Input
+          label="Email"
+          type="email"
+          name="email"
+          autoComplete="email"
+          value={form.email}
+          onChange={handleChange}
+          required
+        />
+        <Input
+          label="Phone (optional)"
+          name="phone"
+          value={form.phone}
+          onChange={handleChange}
+        />
+        <Input
+          label="Password"
+          type="password"
+          name="password"
+          autoComplete="new-password"
+          value={form.password}
+          onChange={handleChange}
+          required
+        />
 
-          {error && <p className="text-sm text-danger">{error}</p>}
+        {error && <p className="text-sm text-danger animate-fade-in">{error}</p>}
 
-          <Button type="submit" disabled={submitting} className="mt-2 w-full">
-            {submitting ? "Creating account…" : "Sign up"}
-          </Button>
-        </form>
+        <Button type="submit" loading={submitting} className="mt-2 w-full">
+          {submitting ? "Creating account…" : "Sign up"}
+        </Button>
+      </form>
 
-        <p className="mt-6 text-center text-sm text-ink-soft">
-          Already have an account?{" "}
-          <Link to="/login" className="font-medium text-brand-600 hover:underline">
-            Log in
-          </Link>
-        </p>
-      </Card>
-    </div>
+      <p className="mt-6 text-center text-sm text-ink-soft">
+        Already have an account?{" "}
+        <Link to="/login" className="font-medium text-brand-600 hover:underline">
+          Log in
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }

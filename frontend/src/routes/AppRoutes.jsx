@@ -14,11 +14,13 @@ import Messages from "../pages/messages/Messages";
 import SellerDashboard from "../pages/seller/SellerDashboard";
 import SellerProducts from "../pages/seller/SellerProducts";
 import SellerProfile from "../pages/seller/SellerProfile";
+import NotFound from "../pages/public/NotFound";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <SiteLayout />,
+    errorElement: <NotFound />,
     children: [
       { index: true, element: <Home /> },
       { path: "search", element: <Search /> },
@@ -74,6 +76,7 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+      { path: "*", element: <NotFound /> },
     ],
   },
 ]);
