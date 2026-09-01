@@ -1,227 +1,75 @@
-import { useCallback, useEffect, useState } from "react";
-import { Heart, MapPin, Tag } from "lucide-react";
-
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getSavedListings, unsaveListing } from "../../api/listings";
 
-// Local images
-import bakeryImage from "../../assets/biz-bakery.jpg";
-import coffeeImage from "../../assets/biz-coffee.jpg";
-import restaurantImage from "../../assets/biz-restaurant.jpg";
-import retailImage from "../../assets/biz-retail.jpg";
-import salonImage from "../../assets/biz-salon.jpg";
-
 const BADGE_STYLES = {
-  VERIFIED: {
-    label: "Verified",
-    className: "bg-[#1F3A2C]/90 text-white",
-  },
-  HOT: {
-    label: "Hot listing",
-    className: "bg-black/55 text-[#F0B429]",
-  },
-  NEW: {
-    label: "New",
-    className: "bg-[#C9D4C2] text-[#1F3A2C]",
-  },
+  VERIFIED: { label: "Verified", className: "bg-primary text-cream" },
+  HOT: { label: "Hot listing", className: "bg-charcoal/80 text-accent" },
+  NEW: { label: "New", className: "bg-primary-light/25 text-primary-dark" },
 };
 
-// Temporary mock data.
-// This lets the page display properly before real users save businesses.
-const MOCK_LISTINGS = [
-  {
-    id: "mock-coffee",
-    name: "Tomoca Corner Coffee House",
-    category: "CAFE & COFFEE",
-    location: "Bole, Addis Ababa",
-    askingPrice: "ETB 1,450,000",
-    coverImageUrl: coffeeImage,
-    badge: "VERIFIED",
-  },
-  {
-    id: "mock-restaurant",
-    name: "Kategna Fine Dining",
-    category: "RESTAURANT",
-    location: "Kazanchis, Addis Ababa",
-    askingPrice: "ETB 4,200,000",
-    coverImageUrl: restaurantImage,
-    badge: "HOT",
-  },
-  {
-    id: "mock-salon",
-    name: "Enat Beauty & Hair Studio",
-    category: "SALON & SPA",
-    location: "Hawassa",
-    askingPrice: "ETB 890,000",
-    coverImageUrl: salonImage,
-    badge: "VERIFIED",
-  },
-  {
-    id: "mock-retail",
-    name: "Merkato Style Boutique",
-    category: "RETAIL SHOP",
-    location: "Addis Ketema, Addis Ababa",
-    askingPrice: "ETB 620,000",
-    coverImageUrl: retailImage,
-    badge: "NEW",
-  },
-  {
-    id: "mock-bakery",
-    name: "Adama Daily Bakery",
-    category: "BAKERY",
-    location: "Adama",
-    askingPrice: "ETB 1,100,000",
-    coverImageUrl: bakeryImage,
-    badge: "VERIFIED",
-  },
-];
-
-export default function Favorites() {
-  const [listings, setListings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [removingId, setRemovingId] = useState(null);
-
-  // Keeps track of whether currently displayed cards are mock cards
-  const [usingMockData, setUsingMockData] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const data = await getSavedListings();
-
-      // If real saved listings exist, use them
-      if (Array.isArray(data) && data.length > 0) {
-        setListings(data);
-        setUsingMockData(false);
-      } else {
-        // Temporary mock cards for development/demo
-        setListings(MOCK_LISTINGS);
-        setUsingMockData(true);
-      }
-    } catch (err) {
-      // If API is not ready yet, still show the page with mock cards
-      setListings(MOCK_LISTINGS);
-      setUsingMockData(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  async function handleUnsave(listingId) {
-    setRemovingId(listingId);
-
-    const previous = listings;
-
-    // Remove from UI immediately
-    setListings((current) =>
-      current.filter((listing) => listing.id !== listingId)
-    );
-
-    try {
-      // Don't call backend for temporary mock listings
-      if (!usingMockData) {
-        await unsaveListing(listingId);
-      }
-    } catch (err) {
-      // Restore if backend removal fails
-      setListings(previous);
-      setError("Couldn't remove that listing. Please try again.");
-    } finally {
-      setRemovingId(null);
-    }
-  }
-
+function HeartIcon({ className, filled }) {
   return (
-    <div className="min-h-screen bg-[#F5F1E7] px-6 py-10 sm:px-10 lg:px-16">
-      <div className="mx-auto max-w-6xl">
+    <svg viewBox="0 0 20 20" fill={filled ? "currentColor" : "none"} className={className}>
+      <path
+        d="M10 17s-6.2-3.9-8.1-7.7C.6 6.7 2 3.5 5 3c1.8-.3 3.5.6 5 2.4C11.5 3.6 13.2 2.7 15 3c3 .5 4.4 3.7 3.1 6.3C16.2 13.1 10 17 10 17Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
-        {/* Header */}
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="font-serif text-4xl font-bold text-[#1E1B16] sm:text-5xl">
-              Saved Businesses
-            </h1>
+function TagIcon({ className }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" className={className}>
+      <path
+        d="M7 2H3.5A1.5 1.5 0 0 0 2 3.5V7l6.6 6.6a1.5 1.5 0 0 0 2.12 0l3.88-3.88a1.5 1.5 0 0 0 0-2.12L8 2Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <circle cx="5.3" cy="5.3" r="0.9" fill="currentColor" />
+    </svg>
+  );
+}
 
-            <p className="mt-3 text-[#6B6558]">
-              Businesses you've saved to revisit later.
-            </p>
-          </div>
-
-          <span className="whitespace-nowrap rounded-full bg-[#DDE0D2] px-5 py-2 text-sm font-medium text-[#3E4636]">
-            {listings.length} saved listing
-            {listings.length === 1 ? "" : "s"}
-          </span>
-        </div>
-
-        <div className="mt-6 border-t border-[#E3DDCE]" />
-
-        {error && (
-          <p className="mt-6 rounded-xl bg-[#F5D9D9] px-4 py-3 text-sm text-[#A33636]">
-            {error}
-          </p>
-        )}
-
-        {/* Grid */}
-        <div className="mt-8">
-          {loading ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-96 animate-pulse rounded-3xl bg-[#EDE8DB]"
-                />
-              ))}
-            </div>
-          ) : listings.length === 0 ? (
-            <div className="rounded-3xl border-2 border-dashed border-[#D9D2BF] bg-[#FDFBF6]/60 px-6 py-16 text-center text-[#6B6558]">
-              You haven't saved any businesses yet.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {listings.map((listing) => (
-                <ListingCard
-                  key={listing.id}
-                  listing={listing}
-                  onUnsave={() => handleUnsave(listing.id)}
-                  removing={removingId === listing.id}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-      </div>
-    </div>
+function MapPinIcon({ className }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" className={className}>
+      <path
+        d="M8 15s5-4.6 5-8.5A5 5 0 0 0 3 6.5C3 10.4 8 15 8 15Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <circle cx="8" cy="6.5" r="1.8" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
   );
 }
 
 function ListingCard({ listing, onUnsave, removing }) {
-  const badge = listing.badge
-    ? BADGE_STYLES[listing.badge]
-    : null;
+  const badge = listing.badge ? BADGE_STYLES[listing.badge] : null;
 
   return (
     <div
-      className={`overflow-hidden rounded-3xl bg-[#FDFBF6] shadow-sm transition-opacity ${
+      className={`overflow-hidden rounded-2xl bg-white transition-opacity ${
         removing ? "opacity-50" : ""
       }`}
     >
-      <div className="relative h-48 w-full">
-        <img
-          src={listing.coverImageUrl}
-          alt={listing.name}
-          className="h-full w-full object-cover"
-        />
+      <div className="relative h-48 w-full bg-primary-light/10">
+        {listing.coverImageUrl && (
+          <img
+            src={listing.coverImageUrl}
+            alt={listing.name}
+            className="h-full w-full object-cover"
+          />
+        )}
 
         {badge && (
           <span
-            className={`absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-medium ${badge.className}`}
+            className={`absolute left-3 top-3 rounded-full px-3 py-1 font-sans text-xs font-medium ${badge.className}`}
           >
             {badge.label}
           </span>
@@ -232,45 +80,128 @@ function ListingCard({ listing, onUnsave, removing }) {
           onClick={onUnsave}
           disabled={removing}
           aria-label="Remove from saved businesses"
-          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-sm transition-transform hover:scale-105 disabled:opacity-60"
+          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-sm transition hover:scale-105 disabled:opacity-60"
         >
-          <Heart className="h-4 w-4 fill-[#1F3A2C] text-[#1F3A2C]" />
+          <HeartIcon filled className="h-4 w-4 text-primary" />
         </button>
       </div>
 
       <div className="p-5">
-        <h3 className="font-serif text-xl font-bold text-[#1E1B16]">
+        <h3 className="font-serif text-xl font-bold text-charcoal">
           {listing.name}
         </h3>
 
-        <div className="mt-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-[#9A9282]">
-          <Tag className="h-3.5 w-3.5" />
+        <div className="mt-2 flex items-center gap-1.5 font-sans text-xs font-medium uppercase tracking-wide text-charcoal/50">
+          <TagIcon className="h-3.5 w-3.5" />
           {listing.category}
         </div>
 
-        <div className="mt-2 flex items-center gap-1.5 text-[#6B6558]">
-          <MapPin className="h-4 w-4" />
+        <div className="mt-2 flex items-center gap-1.5 font-sans text-sm text-charcoal/70">
+          <MapPinIcon className="h-4 w-4" />
           {listing.location}
         </div>
 
-        <div className="mt-4 flex items-end justify-between border-t border-[#E3DDCE] pt-4">
+        <div className="mt-4 flex items-end justify-between border-t border-primary-light/20 pt-4">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-[#9A9282]">
+            <p className="font-sans text-xs font-medium uppercase tracking-wide text-charcoal/50">
               Asking price
             </p>
-
-            <p className="mt-1 font-semibold text-[#1E1B16]">
+            <p className="mt-1 font-sans font-semibold text-charcoal">
               {listing.askingPrice}
             </p>
           </div>
 
           <a
-            href={`/listings/${listing.id}`}
-            className="rounded-full bg-[#1F3A2C] px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-[#183024]"
+            href={`/business/${listing.id}`}
+            className="rounded-full bg-primary px-5 py-2 font-sans text-sm font-medium text-cream transition hover:bg-primary-dark"
           >
             View Details
           </a>
         </div>
+      </div>
+    </div>
+  );
+}
+
+export default function Favorites() {
+  const queryClient = useQueryClient();
+  const [removingId, setRemovingId] = useState(null);
+
+  const {
+    data: listings,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["savedListings"],
+    queryFn: getSavedListings,
+    retry: false,
+  });
+
+  const { mutate: removeSaved } = useMutation({
+    mutationFn: (listingId) => unsaveListing(listingId),
+    onMutate: (listingId) => setRemovingId(listingId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["savedListings"] });
+    },
+    onSettled: () => setRemovingId(null),
+  });
+
+  const count = listings?.length ?? 0;
+
+  return (
+    <div className="min-h-screen bg-cream px-6 py-12">
+      <div className="mx-auto max-w-6xl">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="font-serif text-4xl font-bold text-charcoal">
+              Saved Businesses
+            </h1>
+            <p className="mt-2 font-sans text-charcoal/70">
+              Businesses you've saved to revisit later.
+            </p>
+          </div>
+
+          {!isLoading && !isError && (
+            <span className="whitespace-nowrap rounded-full bg-primary-light/15 px-5 py-2 font-sans text-sm font-medium text-primary-dark">
+              {count} saved listing{count === 1 ? "" : "s"}
+            </span>
+          )}
+        </div>
+
+        <div className="mt-6 border-t border-primary-light/20" />
+
+        {isLoading && (
+          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-96 animate-pulse rounded-2xl bg-white/60" />
+            ))}
+          </div>
+        )}
+
+        {isError && (
+          <p className="mt-8 font-sans text-sm text-red-700">
+            Couldn't load your saved businesses. Please refresh the page.
+          </p>
+        )}
+
+        {!isLoading && !isError && count === 0 && (
+          <div className="mt-8 rounded-2xl border-2 border-dashed border-primary-light/40 bg-white/40 px-6 py-16 text-center font-sans text-charcoal/60">
+            You haven't saved any businesses yet.
+          </div>
+        )}
+
+        {!isLoading && !isError && count > 0 && (
+          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {listings.map((listing) => (
+              <ListingCard
+                key={listing.id}
+                listing={listing}
+                onUnsave={() => removeSaved(listing.id)}
+                removing={removingId === listing.id}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
