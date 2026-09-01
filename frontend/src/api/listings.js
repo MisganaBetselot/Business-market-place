@@ -1,35 +1,27 @@
-import axios from "axios";
+import api from "./client";
 
 /**
- * API client for the `listings` app (business listings + saved/favorites).
- *
- * ASSUMPTION (confirm/adjust field names to match your actual backend):
- * - A listing has: id, business_name, category, location, asking_price,
- *   cover_image_url, badge ("VERIFIED" | "HOT" | "NEW" | null).
- * - Saved/favorite listings are per-user, via a "saved listings" endpoint.
- * - Auth: JWT via `Authorization: Bearer <token>` header.
+ * Listings API. All requests hit the real Django endpoints under /api/listings/.
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+export function getListings() {
+  return api.get("/listings/").then((r) => r.data);
+}
 
-const client = axios.create({
-  baseURL: BASE_URL,
-});
+export function getListing(id) {
+  return api.get(`/listings/${id}/`).then((r) => r.data);
+}
 
-client.interceptors.request.use((config) => {
-  const token = localStorage.getItem("access_token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+export function createListing(payload) {
+  return api.post("/listings/", payload).then((r) => r.data);
+}
 
 /**
  * Fetch listings the current user has saved/favorited.
  * @returns {Promise<object[]>}
  */
 export async function getSavedListings() {
-  const { data } = await client.get("/listings/saved/");
+  const data = await api.get("/listings/saved/").then((r) => r.data);
   const list = Array.isArray(data) ? data : data.results || [];
   return list.map(normalizeListing);
 }
@@ -37,28 +29,25 @@ export async function getSavedListings() {
 /**
  * Save (favorite) a listing for the current user.
  * @param {string} listingId
- * @returns {Promise<void>}
  */
-export async function saveListing(listingId) {
-  await client.post(`/listings/${listingId}/save/`);
+export function saveListing(listingId) {
+  return api.post(`/listings/${listingId}/save/`).then((r) => r.data);
 }
 
 /**
  * Remove a listing from the current user's saved list.
  * @param {string} listingId
- * @returns {Promise<void>}
  */
-export async function unsaveListing(listingId) {
-  await client.delete(`/listings/${listingId}/save/`);
+export function unsaveListing(listingId) {
+  return api.delete(`/listings/${listingId}/save/`).then((r) => r.data);
 }
 
 /**
- * Fetch a single listing by id (e.g. for a details page).
+ * Fetch a single listing by id, normalized (e.g. for a details page).
  * @param {string} listingId
- * @returns {Promise<object>}
  */
 export async function getListingById(listingId) {
-  const { data } = await client.get(`/listings/${listingId}/`);
+  const data = await api.get(`/listings/${listingId}/`).then((r) => r.data);
   return normalizeListing(data);
 }
 
@@ -75,5 +64,3 @@ function normalizeListing(raw) {
     badge: raw.badge || null,
   };
 }
-
-export default client;
