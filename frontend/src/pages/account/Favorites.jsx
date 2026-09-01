@@ -1,204 +1,109 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getSavedListings, unsaveListing } from "../../api/listings";
+// Owner: muni
+import { Heart, MapPin, Tag } from "lucide-react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import axiosClient from "../../api/axiosClient";
+import { Card, Badge } from "../../components/common/Card"; // TODO: confirm real path with lidu
 
-const BADGE_STYLES = {
-  VERIFIED: { label: "Verified", className: "bg-primary text-cream" },
-  HOT: { label: "Hot listing", className: "bg-charcoal/80 text-accent" },
-  NEW: { label: "New", className: "bg-primary-light/25 text-primary-dark" },
+const getFavorites = () => axiosClient.get("/favorites/");
+const removeFavorite = (listingId) => axiosClient.delete(`/favorites/${listingId}/`);
+
+const BADGE_TONE = {
+  Verified: "brand",
+  New: "gold",
+  "Hot listing": "gold",
 };
-
-function HeartIcon({ className, filled }) {
-  return (
-    <svg viewBox="0 0 20 20" fill={filled ? "currentColor" : "none"} className={className}>
-      <path
-        d="M10 17s-6.2-3.9-8.1-7.7C.6 6.7 2 3.5 5 3c1.8-.3 3.5.6 5 2.4C11.5 3.6 13.2 2.7 15 3c3 .5 4.4 3.7 3.1 6.3C16.2 13.1 10 17 10 17Z"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function TagIcon({ className }) {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" className={className}>
-      <path
-        d="M7 2H3.5A1.5 1.5 0 0 0 2 3.5V7l6.6 6.6a1.5 1.5 0 0 0 2.12 0l3.88-3.88a1.5 1.5 0 0 0 0-2.12L8 2Z"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-      <circle cx="5.3" cy="5.3" r="0.9" fill="currentColor" />
-    </svg>
-  );
-}
-
-function MapPinIcon({ className }) {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" className={className}>
-      <path
-        d="M8 15s5-4.6 5-8.5A5 5 0 0 0 3 6.5C3 10.4 8 15 8 15Z"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-      <circle cx="8" cy="6.5" r="1.8" stroke="currentColor" strokeWidth="1.3" />
-    </svg>
-  );
-}
-
-function ListingCard({ listing, onUnsave, removing }) {
-  const badge = listing.badge ? BADGE_STYLES[listing.badge] : null;
-
-  return (
-    <div
-      className={`overflow-hidden rounded-2xl bg-white transition-opacity ${
-        removing ? "opacity-50" : ""
-      }`}
-    >
-      <div className="relative h-48 w-full bg-primary-light/10">
-        {listing.coverImageUrl && (
-          <img
-            src={listing.coverImageUrl}
-            alt={listing.name}
-            className="h-full w-full object-cover"
-          />
-        )}
-
-        {badge && (
-          <span
-            className={`absolute left-3 top-3 rounded-full px-3 py-1 font-sans text-xs font-medium ${badge.className}`}
-          >
-            {badge.label}
-          </span>
-        )}
-
-        <button
-          type="button"
-          onClick={onUnsave}
-          disabled={removing}
-          aria-label="Remove from saved businesses"
-          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-sm transition hover:scale-105 disabled:opacity-60"
-        >
-          <HeartIcon filled className="h-4 w-4 text-primary" />
-        </button>
-      </div>
-
-      <div className="p-5">
-        <h3 className="font-serif text-xl font-bold text-charcoal">
-          {listing.name}
-        </h3>
-
-        <div className="mt-2 flex items-center gap-1.5 font-sans text-xs font-medium uppercase tracking-wide text-charcoal/50">
-          <TagIcon className="h-3.5 w-3.5" />
-          {listing.category}
-        </div>
-
-        <div className="mt-2 flex items-center gap-1.5 font-sans text-sm text-charcoal/70">
-          <MapPinIcon className="h-4 w-4" />
-          {listing.location}
-        </div>
-
-        <div className="mt-4 flex items-end justify-between border-t border-primary-light/20 pt-4">
-          <div>
-            <p className="font-sans text-xs font-medium uppercase tracking-wide text-charcoal/50">
-              Asking price
-            </p>
-            <p className="mt-1 font-sans font-semibold text-charcoal">
-              {listing.askingPrice}
-            </p>
-          </div>
-
-          <a
-            href={`/business/${listing.id}`}
-            className="rounded-full bg-primary px-5 py-2 font-sans text-sm font-medium text-cream transition hover:bg-primary-dark"
-          >
-            View Details
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function Favorites() {
   const queryClient = useQueryClient();
-  const [removingId, setRemovingId] = useState(null);
 
-  const {
-    data: listings,
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: ["savedListings"],
-    queryFn: getSavedListings,
-    retry: false,
+  const { data: favorites, isLoading } = useQuery({
+    queryKey: ["favorites"],
+    queryFn: () => getFavorites().then((res) => res.data),
   });
 
-  const { mutate: removeSaved } = useMutation({
-    mutationFn: (listingId) => unsaveListing(listingId),
-    onMutate: (listingId) => setRemovingId(listingId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["savedListings"] });
-    },
-    onSettled: () => setRemovingId(null),
+  const removeMutation = useMutation({
+    mutationFn: removeFavorite,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["favorites"] }),
   });
 
-  const count = listings?.length ?? 0;
+  const count = favorites?.length ?? 0;
 
   return (
-    <div className="min-h-screen bg-cream px-6 py-12">
+    <div className="min-h-screen bg-surface-sunken px-4 py-10">
       <div className="mx-auto max-w-6xl">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex items-start justify-between border-b border-border pb-6 mb-8">
           <div>
-            <h1 className="font-serif text-4xl font-bold text-charcoal">
-              Saved Businesses
-            </h1>
-            <p className="mt-2 font-sans text-charcoal/70">
-              Businesses you've saved to revisit later.
-            </p>
+            <h1 className="text-3xl text-ink mb-2">Saved Businesses</h1>
+            <p className="text-ink-soft">Businesses you've saved to revisit later.</p>
           </div>
-
-          {!isLoading && !isError && (
-            <span className="whitespace-nowrap rounded-full bg-primary-light/15 px-5 py-2 font-sans text-sm font-medium text-primary-dark">
-              {count} saved listing{count === 1 ? "" : "s"}
-            </span>
-          )}
+          <Badge tone="brand">{count} saved listing{count === 1 ? "" : "s"}</Badge>
         </div>
 
-        <div className="mt-6 border-t border-primary-light/20" />
-
         {isLoading && (
-          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-96 animate-pulse rounded-2xl bg-white/60" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="h-96 animate-pulse" />
             ))}
           </div>
         )}
 
-        {isError && (
-          <p className="mt-8 font-sans text-sm text-red-700">
-            Couldn't load your saved businesses. Please refresh the page.
-          </p>
+        {favorites && favorites.length === 0 && (
+          <Card className="p-16 text-center text-ink-soft">
+            No saved listings yet. Browse the marketplace and tap the heart icon to save one.
+          </Card>
         )}
 
-        {!isLoading && !isError && count === 0 && (
-          <div className="mt-8 rounded-2xl border-2 border-dashed border-primary-light/40 bg-white/40 px-6 py-16 text-center font-sans text-charcoal/60">
-            You haven't saved any businesses yet.
-          </div>
-        )}
-
-        {!isLoading && !isError && count > 0 && (
-          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {listings.map((listing) => (
-              <ListingCard
-                key={listing.id}
-                listing={listing}
-                onUnsave={() => removeSaved(listing.id)}
-                removing={removingId === listing.id}
-              />
+        {favorites && favorites.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {favorites.map((listing) => (
+              <Card key={listing.id} className="overflow-hidden p-0">
+                <div className="relative">
+                  <img
+                    src={listing.cover_image}
+                    alt={listing.title}
+                    className="w-full h-64 object-cover"
+                  />
+                  {listing.badge && (
+                    <span className="absolute top-4 left-4">
+                      <Badge tone={BADGE_TONE[listing.badge] || "neutral"}>{listing.badge}</Badge>
+                    </span>
+                  )}
+                  <button
+                    onClick={() => removeMutation.mutate(listing.id)}
+                    className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/95 flex items-center justify-center text-brand-600 shadow-sm hover:text-danger transition-colors"
+                    aria-label="Remove from saved"
+                  >
+                    <Heart className="h-4.5 w-4.5 fill-current" strokeWidth={1.75} />
+                  </button>
+                </div>
+                <div className="p-5">
+                  <h3 className="text-xl text-ink mb-1">{listing.title}</h3>
+                  <p className="flex items-center gap-1.5 text-xs text-ink-soft uppercase tracking-wide mb-1">
+                    <Tag className="h-3.5 w-3.5" strokeWidth={1.75} />
+                    {listing.category}
+                  </p>
+                  <p className="flex items-center gap-1.5 text-sm text-ink-soft mb-4">
+                    <MapPin className="h-3.5 w-3.5" strokeWidth={1.75} />
+                    {listing.location}
+                  </p>
+                  <div className="border-t border-border pt-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-ink-soft mb-0.5">
+                        Asking price
+                      </p>
+                      <p className="text-xl font-semibold text-brand-600">
+                        ETB {Number(listing.price).toLocaleString()}
+                      </p>
+                    </div>
+                    <a
+                      href={`/business/${listing.id}`}
+                      className="px-5 py-2.5 rounded-xl bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 transition-colors"
+                    >
+                      View Details
+                    </a>
+                  </div>
+                </div>
+              </Card>
             ))}
           </div>
         )}
