@@ -3,13 +3,19 @@ import axios from "axios";
 /**
  * API client for the `payments` app (payment receipts).
  *
- * Backend contract (per Business Marketplace backend progress report):
- * - A receipt belongs to a user and a seller_subscription.
+ * CONFIRMED against Business_Marketplace_Integration_Report.md (live curl
+ * testing, Sept 2 2026) — do not "fix" these back to /payments/receipts/:
+ * - Create/list:  POST/GET /payments/   (NOT /payments/receipts/)
+ * - Filter param: ?subscription=<id>    (NOT ?seller_subscription=<id>)
+ * - No detail route exists (GET /payments/{id}/ is a 404) — don't add one
+ *   back until the backend actually has it.
+ *
+ * Backend contract (per backend progress report):
  * - Fields: file, review_status, reviewer, reviewed_at, rejection_reason,
- *   seller_subscription, created_at.
+ *   subscription, created_at.
  * - review_status: "PENDING" | "APPROVED" | "REJECTED"
- * - Approving a receipt (admin-only) flips the linked seller_subscription
- *   to ACTIVE and stamps start/expiry dates.
+ * - Approving a receipt (admin-only) flips the linked subscription to
+ *   ACTIVE and stamps start/expiry dates.
  * - Auth: JWT via `Authorization: Bearer <token>` header.
  */
 
@@ -29,17 +35,17 @@ client.interceptors.request.use((config) => {
 
 /**
  * Upload a payment receipt for a given seller subscription.
- * @param {string} sellerSubscriptionId - UUID of the seller_subscription
+ * @param {string} sellerSubscriptionId - id of the subscription
  * @param {File} file - the receipt file (JPG, PNG or PDF, max 5MB)
  * @param {(percent: number) => void} [onProgress] - optional upload progress callback
  * @returns {Promise<object>} the created receipt
  */
 export async function uploadPaymentReceipt(sellerSubscriptionId, file, onProgress) {
   const formData = new FormData();
-  formData.append("seller_subscription", sellerSubscriptionId);
+  formData.append("subscription", sellerSubscriptionId);
   formData.append("file", file);
 
-  const { data } = await client.post("/payments/receipts/", formData, {
+  const { data } = await client.post("/payments/", formData, {
     headers: { "Content-Type": "multipart/form-data" },
     onUploadProgress: (event) => {
       if (onProgress && event.total) {
@@ -53,15 +59,16 @@ export async function uploadPaymentReceipt(sellerSubscriptionId, file, onProgres
 
 /**
  * Fetch all receipts submitted for a given seller subscription,
- * most recent first.
+ * most recent first. Handles both plain-array and paginated
+ * ({ results: [...] }) responses.
  * @param {string} sellerSubscriptionId
  * @returns {Promise<object[]>}
  */
 export async function getReceiptsForSubscription(sellerSubscriptionId) {
-  const { data } = await client.get("/payments/receipts/", {
-    params: { seller_subscription: sellerSubscriptionId },
+  const { data } = await client.get("/payments/", {
+    params: { subscription: sellerSubscriptionId },
   });
-  return data;
+  return Array.isArray(data) ? data : data.results ?? [];
 }
 
 /**
@@ -79,14 +86,9 @@ export async function getLatestReceipt(sellerSubscriptionId) {
   )[0];
 }
 
-/**
- * Fetch a single receipt by id.
- * @param {string} receiptId
- * @returns {Promise<object>}
- */
-export async function getReceiptById(receiptId) {
-  const { data } = await client.get(`/payments/receipts/${receiptId}/`);
-  return data;
-}
+// NOTE: there is deliberately no getReceiptById() here — the report
+// confirmed GET /payments/{id}/ doesn't exist on the backend. Use
+// getLatestReceipt()/getReceiptsForSubscription() instead, or ask
+// backend to add a detail route if you need one.
 
 export default client;

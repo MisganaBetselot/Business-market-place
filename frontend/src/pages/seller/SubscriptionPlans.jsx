@@ -12,24 +12,36 @@ const STATUS_COPY = {
   PENDING: {
     label: "Payment under review",
     body: "We're checking your receipt. This usually takes less than a day.",
+    tone: "warning",
   },
   ACTIVE: {
     label: "Your plan is active",
     body: "You're all set — head to media upload to add photos or videos.",
+    tone: "success",
   },
   EXPIRED: {
     label: "Your plan has expired",
     body: "Renew a plan below to keep uploading and showing media.",
+    tone: "danger",
   },
   REJECTED: {
     label: "Your last payment was rejected",
     body: "Pick a plan below and submit a new receipt to try again.",
+    tone: "danger",
   },
   CANCELLED: {
     label: "Your plan was cancelled",
     body: "Choose a plan below whenever you're ready to reactivate.",
+    tone: "warning",
   },
 };
+
+const TONE_STYLES = {
+  success: { border: "border-l-success", dot: "bg-success" },
+  warning: { border: "border-l-warning", dot: "bg-warning" },
+  danger: { border: "border-l-danger", dot: "bg-danger" },
+};
+
 const MOCK_PLANS = [
   {
     id: "mock-photo-1",
@@ -72,25 +84,25 @@ const MOCK_PLANS = [
     is_popular: false,
   },
   {
-  id: "mock-photo-3",
-  media_type: "PHOTO",
-  duration_days: 180,
-  duration_label: "6 Months",
-  price: 2200,
-  description: "Long-term photo coverage for your business listing.",
-  features: ["Photo uploads included"],
-  is_popular: false,
-},
-{
-  id: "mock-video-3",
-  media_type: "VIDEO",
-  duration_days: 180,
-  duration_label: "6 Months",
-  price: 3800,
-  description: "Long-term video coverage for your business listing.",
-  features: ["Video uploads included"],
-  is_popular: false,
-},
+    id: "mock-photo-3",
+    media_type: "PHOTO",
+    duration_days: 180,
+    duration_label: "6 Months",
+    price: 2200,
+    description: "Long-term photo coverage for your business listing.",
+    features: ["Photo uploads included"],
+    is_popular: false,
+  },
+  {
+    id: "mock-video-3",
+    media_type: "VIDEO",
+    duration_days: 180,
+    duration_label: "6 Months",
+    price: 3800,
+    description: "Long-term video coverage for your business listing.",
+    features: ["Video uploads included"],
+    is_popular: false,
+  },
 ];
 
 function formatDuration(days) {
@@ -113,13 +125,7 @@ function CameraIcon({ className }) {
         stroke="currentColor"
         strokeWidth="1.6"
       />
-      <circle
-        cx="12"
-        cy="13"
-        r="3.2"
-        stroke="currentColor"
-        strokeWidth="1.6"
-      />
+      <circle cx="12" cy="13" r="3.2" stroke="currentColor" strokeWidth="1.6" />
     </svg>
   );
 }
@@ -127,15 +133,7 @@ function CameraIcon({ className }) {
 function VideoIcon({ className }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
-      <rect
-        x="3"
-        y="6"
-        width="13"
-        height="12"
-        rx="2"
-        stroke="currentColor"
-        strokeWidth="1.6"
-      />
+      <rect x="3" y="6" width="13" height="12" rx="2" stroke="currentColor" strokeWidth="1.6" />
       <path
         d="m16 10.5 4.2-2.6a.8.8 0 0 1 1.2.68v6.84a.8.8 0 0 1-1.2.68L16 13.5"
         stroke="currentColor"
@@ -160,82 +158,71 @@ function CheckIcon({ className }) {
   );
 }
 
-function PlanCard({ plan, selected, onSelect }) {
+function PlanCard({ plan, selected, onSelect, animationDelayClass }) {
   const durationLabel =
-    plan.duration_label ??
-    formatDuration(plan.duration ?? plan.duration_days);
+    plan.duration_label ?? formatDuration(plan.duration ?? plan.duration_days);
 
-  const Icon =
-    plan.media_type === "VIDEO"
-      ? VideoIcon
-      : CameraIcon;
+  const Icon = plan.media_type === "VIDEO" ? VideoIcon : CameraIcon;
 
   return (
     <div
-      className={`relative flex flex-col rounded-xl border bg-white p-6 transition ${
+      className={`relative flex flex-col rounded-xl border bg-surface p-6 transition animate-fade-up ${animationDelayClass} ${
         selected
-          ? "border-primary shadow-md ring-1 ring-primary"
-          : "border-primary-light/30 hover:border-primary-light"
+          ? "border-brand-500 shadow-md ring-1 ring-brand-500"
+          : "border-border hover:border-brand-400"
       }`}
     >
       {plan.is_popular && (
-        <span className="absolute -top-3 right-4 rounded-full bg-primary px-3 py-1 font-sans text-[11px] font-semibold uppercase tracking-wide text-cream shadow-sm">
+        <span className="absolute -top-3 right-4 rounded-full bg-gold-500 px-3 py-1 font-sans text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm">
           Most Chosen
         </span>
       )}
 
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-light/15 text-primary-dark">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
           <Icon className="h-5 w-5" />
         </div>
 
         <div>
-          <p className="font-sans text-xs font-medium uppercase tracking-wide text-charcoal/50">
-            {plan.media_type === "VIDEO"
-              ? "Video Plan"
-              : "Photo Plan"}
+          <p className="font-sans text-xs font-medium uppercase tracking-wide text-ink-soft">
+            {plan.media_type === "VIDEO" ? "Video Plan" : "Photo Plan"}
           </p>
 
-          <p className="font-serif text-xl font-semibold text-charcoal">
+          <p className="font-display text-xl font-semibold text-ink">
             {durationLabel}
           </p>
         </div>
       </div>
 
       <div className="mt-5">
-        <span className="font-sans text-2xl font-bold text-primary-dark">
+        <span className="font-sans text-2xl font-bold text-brand-600">
           ETB {Number(plan.price).toLocaleString()}
         </span>
 
-        <p className="mt-0.5 font-sans text-xs text-charcoal/50">
+        <p className="mt-0.5 font-sans text-xs text-ink-soft">
           Billed once for {durationLabel}
         </p>
       </div>
 
       {plan.description && (
-        <p className="mt-3 font-sans text-sm text-charcoal/70">
-          {plan.description}
-        </p>
+        <p className="mt-3 font-sans text-sm text-ink-soft">{plan.description}</p>
       )}
 
-      {Array.isArray(plan.features) &&
-        plan.features.length > 0 && (
-          <div className="mt-4 flex items-center gap-2 rounded-full bg-cream px-4 py-2">
-            <CheckIcon className="h-4 w-4 shrink-0 text-primary-dark" />
+      {Array.isArray(plan.features) && plan.features.length > 0 && (
+        <div className="mt-4 flex items-center gap-2 rounded-full bg-sage-100 px-4 py-2">
+          <CheckIcon className="h-4 w-4 shrink-0 text-brand-600" />
 
-            <span className="font-sans text-sm text-charcoal/80">
-              {plan.features[0]}
-            </span>
-          </div>
-        )}
+          <span className="font-sans text-sm text-ink">{plan.features[0]}</span>
+        </div>
+      )}
 
       <button
         type="button"
         onClick={() => onSelect(plan)}
         className={`mt-6 w-full rounded-full py-2.5 font-sans text-sm font-semibold transition ${
           selected
-            ? "bg-primary text-cream"
-            : "border border-primary-light/50 text-primary-dark hover:bg-primary-light/10"
+            ? "bg-brand-500 text-white"
+            : "border border-border text-brand-600 hover:bg-brand-50"
         }`}
       >
         {selected ? "Selected ✓" : "Select Plan"}
@@ -253,54 +240,47 @@ export default function SubscriptionPlans() {
 
   // Get available subscription plans
   const {
-  data: plansData,
-  isLoading: plansLoading,
-  isError: plansError,
-} = useQuery({
-  queryKey: ["subscriptionPlans"],
-  queryFn: async () => {
-    try {
-      return await getSubscriptionPlans();
-    } catch {
-      return MOCK_PLANS;
-    }
-  },
-});
+    data: plansData,
+    isLoading: plansLoading,
+    isError: plansError,
+  } = useQuery({
+    queryKey: ["subscriptionPlans"],
+    queryFn: async () => {
+      try {
+        return await getSubscriptionPlans();
+      } catch {
+        return MOCK_PLANS;
+      }
+    },
+  });
 
   // Get user's existing subscriptions
-  const {
-    data: subscriptionsData,
-    isLoading: subLoading,
-  } = useQuery({
+  const { data: subscriptionsData, isLoading: subLoading } = useQuery({
     queryKey: ["mySubscriptions"],
     queryFn: getMySubscriptions,
     retry: false,
   });
 
   // Handle different possible API response formats
-  const plans = Array.isArray(plansData)
-    ? plansData
-    : plansData?.results ?? [];
+  const plans = Array.isArray(plansData) ? plansData : plansData?.results ?? [];
 
   const subscriptions = Array.isArray(subscriptionsData)
     ? subscriptionsData
     : subscriptionsData?.results ?? [];
 
   // Find subscription for the currently selected media type
- // Find subscription for the currently selected media type
-const currentSubscription = subscriptions.find((subscription) => {
-  const subscriptionMediaType =
-    subscription.media_type ??
-    subscription.plan?.media_type;
+  const currentSubscription = subscriptions.find((subscription) => {
+    const subscriptionMediaType =
+      subscription.media_type ?? subscription.plan?.media_type;
 
-  return subscriptionMediaType === mediaTab;
-});
+    return subscriptionMediaType === mediaTab;
+  });
 
   const status = currentSubscription?.status;
+  const statusInfo = status ? STATUS_COPY[status] : null;
+  const toneStyle = statusInfo ? TONE_STYLES[statusInfo.tone] : null;
 
-  const blockingStatus =
-    status === "PENDING" ||
-    status === "ACTIVE";
+  const blockingStatus = status === "PENDING" || status === "ACTIVE";
 
   // Create subscription when seller clicks Continue to Payment
   const {
@@ -308,13 +288,10 @@ const currentSubscription = subscriptions.find((subscription) => {
     isPending: subscribing,
     isError: subscriptionError,
   } = useMutation({
-    mutationFn: (planId) =>
-      createSellerSubscription(planId),
+    mutationFn: (planId) => createSellerSubscription(planId),
 
     onSuccess: (data) => {
-      queryClient.invalidateQueries({
-        queryKey: ["mySubscriptions"],
-      });
+      queryClient.invalidateQueries({ queryKey: ["mySubscriptions"] });
 
       /*
         Pass selected plan + created subscription
@@ -330,9 +307,7 @@ const currentSubscription = subscriptions.find((subscription) => {
   });
 
   const visiblePlans = useMemo(() => {
-    return plans.filter(
-      (plan) => plan.media_type === mediaTab
-    );
+    return plans.filter((plan) => plan.media_type === mediaTab);
   }, [plans, mediaTab]);
 
   const handleSelectTab = (tab) => {
@@ -340,81 +315,78 @@ const currentSubscription = subscriptions.find((subscription) => {
     setSelectedPlan(null);
   };
 
- const handleContinueToPayment = () => {
-  if (!selectedPlan) return;
+  const handleContinueToPayment = () => {
+    if (!selectedPlan) return;
 
-  const isMockPlan =
-    typeof selectedPlan.id === "string" &&
-    selectedPlan.id.startsWith("mock-");
+    const isMockPlan =
+      typeof selectedPlan.id === "string" && selectedPlan.id.startsWith("mock-");
 
-  if (isMockPlan) {
-    navigate("/sell/payment-instructions", {
-      state: {
-        selectedPlan,
-      },
-    });
-    return;
-  }
+    if (isMockPlan) {
+      navigate("/sell/payment-instructions", {
+        state: {
+          selectedPlan,
+        },
+      });
+      return;
+    }
 
-  confirmPlan(selectedPlan.id);
-};
+    confirmPlan(selectedPlan.id);
+  };
+
+  const stagger = ["stagger-1", "stagger-2", "stagger-3", "stagger-4"];
 
   return (
-    <div className="min-h-screen bg-cream pb-28">
+    <div className="min-h-screen bg-surface-sunken pb-28">
       <div className="mx-auto max-w-5xl px-6 py-12">
+        <div className="animate-fade-up">
+          <h1 className="font-display text-4xl font-bold text-ink">
+            Choose a Media Plan
+          </h1>
 
-        <h1 className="font-serif text-4xl font-bold text-charcoal">
-          Choose a Media Plan
-        </h1>
+          <p className="mt-3 max-w-2xl font-sans text-ink-soft">
+            Select a plan to activate photo or video uploads for your business
+            listing. Photo and video subscriptions are purchased separately and
+            can expire on different dates.
+          </p>
+        </div>
 
-        <p className="mt-3 max-w-2xl font-sans text-charcoal/70">
-          Select a plan to activate photo or video uploads
-          for your business listing. Photo and video
-          subscriptions are purchased separately and can
-          expire on different dates.
-        </p>
-
-        {!subLoading &&
-          status &&
-          STATUS_COPY[status] && (
-            <div className="mt-6 max-w-xl rounded-lg border border-primary-light/40 bg-white/70 p-5">
-
-              <p className="font-sans text-sm font-semibold text-primary-dark">
-                {STATUS_COPY[status].label}
+        {!subLoading && statusInfo && (
+          <div
+            className={`mt-6 max-w-xl rounded-lg border border-border border-l-4 bg-surface p-5 ${toneStyle.border}`}
+          >
+            <div className="flex items-center gap-2">
+              <span className={`h-2 w-2 shrink-0 rounded-full ${toneStyle.dot}`} />
+              <p className="font-sans text-sm font-semibold text-ink">
+                {statusInfo.label}
               </p>
-
-              <p className="mt-1 font-sans text-sm text-charcoal/70">
-                {STATUS_COPY[status].body}
-              </p>
-
-              {blockingStatus && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate("/sell/subscription-status")
-                  }
-                  className="mt-3 font-sans text-sm font-medium text-primary underline underline-offset-2 hover:text-primary-dark"
-                >
-                  View subscription status
-                </button>
-              )}
-
             </div>
-          )}
+
+            <p className="mt-1 font-sans text-sm text-ink-soft">
+              {statusInfo.body}
+            </p>
+
+            {blockingStatus && (
+              <button
+                type="button"
+                onClick={() => navigate("/sell/subscription-status")}
+                className="mt-3 font-sans text-sm font-medium text-brand-600 underline underline-offset-2 hover:text-brand-700"
+              >
+                View subscription status
+              </button>
+            )}
+          </div>
+        )}
 
         {/* PHOTO / VIDEO TABS */}
 
-        <div className="mt-8 inline-flex rounded-full border border-primary-light/40 bg-white p-1">
-
+        <div className="mt-8 inline-flex rounded-full border border-border bg-surface p-1">
           <button
             type="button"
-            onClick={() =>
-              handleSelectTab("PHOTO")
-            }
+            onClick={() => handleSelectTab("PHOTO")}
             className={`flex items-center gap-2 rounded-full px-5 py-2 font-sans text-sm font-semibold transition ${
               mediaTab === "PHOTO"
-                ? "bg-primary text-cream"
-                : "text-primary-dark hover:bg-primary-light/10"
+                ? "bg-brand-500 text-white"
+                : "text-brand-600 hover:bg-brand-50"
             }`}
           >
             <CameraIcon className="h-4 w-4" />
@@ -423,104 +395,74 @@ const currentSubscription = subscriptions.find((subscription) => {
 
           <button
             type="button"
-            onClick={() =>
-              handleSelectTab("VIDEO")
-            }
+            onClick={() => handleSelectTab("VIDEO")}
             className={`flex items-center gap-2 rounded-full px-5 py-2 font-sans text-sm font-semibold transition ${
               mediaTab === "VIDEO"
-                ? "bg-primary text-cream"
-                : "text-primary-dark hover:bg-primary-light/10"
+                ? "bg-brand-500 text-white"
+                : "text-brand-600 hover:bg-brand-50"
             }`}
           >
             <VideoIcon className="h-4 w-4" />
             Video Plans
           </button>
-
         </div>
 
         {plansLoading && (
-          <p className="mt-10 font-sans text-charcoal/60">
-            Loading plans...
-          </p>
+          <p className="mt-10 font-sans text-ink-soft">Loading plans...</p>
         )}
 
         {plansError && (
-          <p className="mt-10 font-sans text-sm text-red-700">
-            Couldn't load subscription plans.
-            Please refresh the page.
+          <p className="mt-10 font-sans text-sm text-danger">
+            Couldn't load subscription plans. Please refresh the page.
           </p>
         )}
 
-        {!plansLoading &&
-          !plansError && (
-            <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {!plansLoading && !plansError && (
+          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {visiblePlans.map((plan, index) => (
+              <PlanCard
+                key={plan.id}
+                plan={plan}
+                selected={selectedPlan?.id === plan.id}
+                onSelect={setSelectedPlan}
+                animationDelayClass={stagger[index % stagger.length]}
+              />
+            ))}
 
-              {visiblePlans.map((plan) => (
-                <PlanCard
-                  key={plan.id}
-                  plan={plan}
-                  selected={
-                    selectedPlan?.id === plan.id
-                  }
-                  onSelect={setSelectedPlan}
-                />
-              ))}
-
-              {visiblePlans.length === 0 && (
-                <p className="font-sans text-sm text-charcoal/50">
-                  No{" "}
-                  {mediaTab === "VIDEO"
-                    ? "video"
-                    : "photo"}{" "}
-                  plans available right now.
-                </p>
-              )}
-
-            </div>
-          )}
+            {visiblePlans.length === 0 && (
+              <p className="font-sans text-sm text-ink-soft">
+                No {mediaTab === "VIDEO" ? "video" : "photo"} plans available
+                right now.
+              </p>
+            )}
+          </div>
+        )}
 
         {subscriptionError && (
-          <p className="mt-6 font-sans text-sm text-red-700">
-            Something went wrong while creating your
-            subscription. Please try again.
+          <p className="mt-6 font-sans text-sm text-danger">
+            Something went wrong while creating your subscription. Please try
+            again.
           </p>
         )}
-
       </div>
 
       {/* BOTTOM SELECTED PLAN BAR */}
 
       {selectedPlan && (
-        <div className="fixed inset-x-0 bottom-0 border-t border-primary-light/30 bg-white/95 px-6 py-4 backdrop-blur">
-
+        <div className="fixed inset-x-0 bottom-0 border-t border-border bg-surface/95 px-6 py-4 backdrop-blur">
           <div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-
             <div>
-              <p className="font-sans text-sm font-medium text-charcoal">
-
+              <p className="font-sans text-sm font-medium text-ink">
                 Selected:{" "}
-
-                {selectedPlan.media_type === "VIDEO"
-                  ? "Video"
-                  : "Photo"}{" "}
-
-                plan ·{" "}
-
+                {selectedPlan.media_type === "VIDEO" ? "Video" : "Photo"} plan ·{" "}
                 {selectedPlan.duration_label ??
                   formatDuration(
-                    selectedPlan.duration ??
-                    selectedPlan.duration_days
+                    selectedPlan.duration ?? selectedPlan.duration_days
                   )}{" "}
-
-                · ETB{" "}
-
-                {Number(
-                  selectedPlan.price
-                ).toLocaleString()}
-
+                · ETB {Number(selectedPlan.price).toLocaleString()}
               </p>
 
-              <p className="font-sans text-xs text-charcoal/50">
+              <p className="font-sans text-xs text-ink-soft">
                 Payment is completed outside the platform.
               </p>
             </div>
@@ -528,23 +470,13 @@ const currentSubscription = subscriptions.find((subscription) => {
             <button
               type="button"
               onClick={handleContinueToPayment}
-              disabled={
-                subscribing ||
-                blockingStatus
-              }
-              className="flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-sans text-sm font-semibold text-cream transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={subscribing || blockingStatus}
+              className="flex items-center gap-2 rounded-full bg-brand-500 px-6 py-2.5 font-sans text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {subscribing
-                ? "Processing..."
-                : "Continue to Payment"}
-
-              <span aria-hidden="true">
-                →
-              </span>
+              {subscribing ? "Processing..." : "Continue to Payment"}
+              <span aria-hidden="true">→</span>
             </button>
-
           </div>
-
         </div>
       )}
     </div>

@@ -1,66 +1,117 @@
-import api from "./client";
+import axios from "axios";
+
+const BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+
+const client = axios.create({
+  baseURL: BASE_URL,
+});
+
+// Attach JWT access token to requests
+client.interceptors.request.use((config) => {
+  const token =
+    localStorage.getItem("bm_access_token") ||
+    localStorage.getItem("accessToken") ||
+    localStorage.getItem("access_token");
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
 
 /**
- * Listings API. All requests hit the real Django endpoints under /api/listings/.
+ * Get all business listings
  */
+export async function getListings() {
+  const { data } = await client.get("/listings/");
 
-export function getListings() {
-  return api.get("/listings/").then((r) => r.data);
-}
-
-export function getListing(id) {
-  return api.get(`/listings/${id}/`).then((r) => r.data);
-}
-
-export function createListing(payload) {
-  return api.post("/listings/", payload).then((r) => r.data);
+  return Array.isArray(data) ? data : data.results ?? [];
 }
 
 /**
- * Fetch listings the current user has saved/favorited.
- * @returns {Promise<object[]>}
+ * Get a single business listing
+ */
+export async function getListing(id) {
+  const { data } = await client.get(`/listings/${id}/`);
+
+  return data;
+}
+
+/**
+ * Alias for pages that use the longer name.
+ */
+export async function getListingById(id) {
+  return getListing(id);
+}
+
+/**
+ * Create a business listing
+ */
+export async function createListing(payload) {
+  const { data } = await client.post("/listings/", payload);
+
+  return data;
+}
+
+/**
+ * Get the current user's saved/favorite listings.
+ *
+ * NOTE:
+ * This endpoint depends on the backend favorites implementation.
  */
 export async function getSavedListings() {
-  const data = await api.get("/listings/saved/").then((r) => r.data);
-  const list = Array.isArray(data) ? data : data.results || [];
+  const { data } = await client.get("/listings/saved/");
+
+  const list = Array.isArray(data)
+    ? data
+    : data.results ?? [];
+
   return list.map(normalizeListing);
 }
 
 /**
- * Save (favorite) a listing for the current user.
- * @param {string} listingId
+ * Save/favorite a listing.
  */
-export function saveListing(listingId) {
-  return api.post(`/listings/${listingId}/save/`).then((r) => r.data);
+export async function saveListing(listingId) {
+  const { data } = await client.post(
+    `/listings/${listingId}/save/`
+  );
+
+  return data;
 }
 
 /**
- * Remove a listing from the current user's saved list.
- * @param {string} listingId
+ * Remove a listing from favorites.
  */
-export function unsaveListing(listingId) {
-  return api.delete(`/listings/${listingId}/save/`).then((r) => r.data);
+export async function unsaveListing(listingId) {
+  const { data } = await client.delete(
+    `/listings/${listingId}/save/`
+  );
+
+  return data;
 }
 
 /**
- * Fetch a single listing by id, normalized (e.g. for a details page).
- * @param {string} listingId
+ * Normalize listing data for the Favorites page.
  */
-export async function getListingById(listingId) {
-  const data = await api.get(`/listings/${listingId}/`).then((r) => r.data);
-  return normalizeListing(data);
-}
-
-// Keep shape-normalization in one place so the rest of the app can rely
-// on a consistent object regardless of small backend response differences.
 function normalizeListing(raw) {
   return {
     id: raw.id,
     name: raw.business_name || raw.name,
     category: raw.category,
     location: raw.location,
-    askingPrice: raw.asking_price_display || raw.asking_price,
-    coverImageUrl: raw.cover_image_url || raw.image || null,
+    askingPrice:
+      raw.asking_price_display ||
+      raw.asking_price ||
+      null,
+    coverImageUrl:
+      raw.cover_image_url ||
+      raw.image ||
+      null,
     badge: raw.badge || null,
   };
 }
+
+export default client;

@@ -7,6 +7,9 @@ export const getMySubscriptions = async () => {
   return response.data;
 };
 
+// Alias for pages that use the longer name
+export const getMySellerSubscriptions = getMySubscriptions;
+
 export const createSellerSubscription = async (planId) => {
   const response = await axiosClient.post("/seller-subscriptions/", {
     plan: planId,
@@ -22,6 +25,3 @@ export const renewSubscription = async (subscriptionId) => {
 
   return response.data;
 };
-
-// Alias for SubscriptionStatus.jsx
-export { getMySubscriptions as getMySellerSubscriptions };
