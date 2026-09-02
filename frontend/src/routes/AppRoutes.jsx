@@ -16,6 +16,14 @@ import SellerProducts from "../pages/seller/SellerProducts";
 import SellerProfile from "../pages/seller/SellerProfile";
 import NotFound from "../pages/public/NotFound";
 
+// Owner: muni
+import Favorites from "../pages/account/Favorites";
+import SubscriptionPlans from "../pages/seller/SubscriptionPlans";
+import PaymentInstructions from "../pages/seller/PaymentInstructions";
+import ReceiptUpload from "../pages/seller/ReceiptUpload";
+import SubscriptionStatus from "../pages/seller/SubscriptionStatus";
+import MediaUpload from "../pages/seller/MediaUpload";
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -28,54 +36,28 @@ const router = createBrowserRouter([
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
       { path: "reset-password", element: <ResetPassword /> },
+
+      // Everything below requires auth. ProtectedRoute is the route
+      // element itself (renders <Outlet /> once authenticated) - actual
+      // pages go in ITS children array, not as a React children prop.
       {
-        path: "account",
-        element: (
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        ),
+        element: <ProtectedRoute />,
+        children: [
+          { path: "account", element: <Dashboard /> },
+          { path: "account/profile", element: <Profile /> },
+          { path: "favorites", element: <Favorites /> },
+          { path: "messages", element: <Messages /> },
+          { path: "seller", element: <SellerDashboard /> },
+          { path: "seller/products", element: <SellerProducts /> },
+          { path: "seller/profile", element: <SellerProfile /> },
+          { path: "sell/plans", element: <SubscriptionPlans /> },
+          { path: "sell/payment-instructions", element: <PaymentInstructions /> },
+          { path: "sell/receipt", element: <ReceiptUpload /> },
+          { path: "sell/subscription-status", element: <SubscriptionStatus /> },
+          { path: "sell/listings/:id/media", element: <MediaUpload /> },
+        ],
       },
-      {
-        path: "account/profile",
-        element: (
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "messages",
-        element: (
-          <ProtectedRoute>
-            <Messages />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "seller",
-        element: (
-          <ProtectedRoute>
-            <SellerDashboard />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "seller/products",
-        element: (
-          <ProtectedRoute>
-            <SellerProducts />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "seller/profile",
-        element: (
-          <ProtectedRoute>
-            <SellerProfile />
-          </ProtectedRoute>
-        ),
-      },
+
       { path: "*", element: <NotFound /> },
     ],
   },

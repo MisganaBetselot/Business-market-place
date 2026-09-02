@@ -1,11 +1,8 @@
 // Owner: muni
 import { Heart, MapPin, Tag } from "lucide-react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import axiosClient from "../../api/axiosClient";
-import { Card, Badge } from "../../components/common/Card"; // TODO: confirm real path with lidu
-
-const getFavorites = () => axiosClient.get("/favorites/");
-const removeFavorite = (listingId) => axiosClient.delete(`/favorites/${listingId}/`);
+import { getSavedListings, unsaveListing } from "../../api/listings";
+import { Card, Badge } from "../../components/common/Card";
 
 const BADGE_TONE = {
   Verified: "brand",
@@ -16,14 +13,15 @@ const BADGE_TONE = {
 export default function Favorites() {
   const queryClient = useQueryClient();
 
-  const { data: favorites, isLoading } = useQuery({
-    queryKey: ["favorites"],
-    queryFn: () => getFavorites().then((res) => res.data),
+  const { data: favorites, isLoading, isError, error } = useQuery({
+    queryKey: ["saved-listings"],
+    queryFn: getSavedListings,
+    retry: false,
   });
 
   const removeMutation = useMutation({
-    mutationFn: removeFavorite,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["favorites"] }),
+    mutationFn: unsaveListing,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["saved-listings"] }),
   });
 
   const count = favorites?.length ?? 0;
@@ -47,7 +45,15 @@ export default function Favorites() {
           </div>
         )}
 
-        {favorites && favorites.length === 0 && (
+        {isError && (
+          <Card className="p-8 text-center text-danger">
+            {error?.response?.status === 404
+              ? "The saved listings feature isn't available on the backend yet."
+              : "Couldn't load your saved listings. Please try again."}
+          </Card>
+        )}
+
+        {!isError && favorites && favorites.length === 0 && (
           <Card className="p-16 text-center text-ink-soft">
             No saved listings yet. Browse the marketplace and tap the heart icon to save one.
           </Card>
@@ -59,8 +65,8 @@ export default function Favorites() {
               <Card key={listing.id} className="overflow-hidden p-0">
                 <div className="relative">
                   <img
-                    src={listing.cover_image}
-                    alt={listing.title}
+                    src={listing.coverImageUrl}
+                    alt={listing.name}
                     className="w-full h-64 object-cover"
                   />
                   {listing.badge && (
@@ -77,7 +83,7 @@ export default function Favorites() {
                   </button>
                 </div>
                 <div className="p-5">
-                  <h3 className="text-xl text-ink mb-1">{listing.title}</h3>
+                  <h3 className="text-xl text-ink mb-1">{listing.name}</h3>
                   <p className="flex items-center gap-1.5 text-xs text-ink-soft uppercase tracking-wide mb-1">
                     <Tag className="h-3.5 w-3.5" strokeWidth={1.75} />
                     {listing.category}
@@ -92,7 +98,7 @@ export default function Favorites() {
                         Asking price
                       </p>
                       <p className="text-xl font-semibold text-brand-600">
-                        ETB {Number(listing.price).toLocaleString()}
+                        {listing.askingPrice}
                       </p>
                     </div>
                     <a
