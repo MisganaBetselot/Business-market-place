@@ -47,3 +47,32 @@ class BusinessListing(models.Model):
 
     def __str__(self):
         return self.business_name
+
+
+
+class SavedListing(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="saved_listings",
+    )
+
+    listing = models.ForeignKey(
+        BusinessListing,
+        on_delete=models.CASCADE,
+        related_name="saved_by",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "listing"],
+                name="unique_saved_listing",
+            )
+        ]
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user} saved {self.listing}"
