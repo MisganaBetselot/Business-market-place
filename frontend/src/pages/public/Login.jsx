@@ -40,19 +40,6 @@ export default function Login() {
       title="Log in"
       subtitle="Pick up where you left off."
     >
-      <GoogleButton
-        onSuccess={() => {
-          const redirectTo = location.state?.from?.pathname || "/";
-          navigate(redirectTo, { replace: true });
-        }}
-      />
-
-      <div className="my-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
-        <span className="text-xs font-medium text-ink-soft">or</span>
-        <div className="h-px flex-1 bg-border" />
-      </div>
-
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input
           label="Email"
@@ -85,6 +72,19 @@ export default function Login() {
           {submitting ? "Logging in…" : "Log in"}
         </Button>
       </form>
+
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs font-medium text-ink-soft">or</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <GoogleButton
+        onSuccess={() => {
+          const redirectTo = location.state?.from?.pathname || "/";
+          navigate(redirectTo, { replace: true });
+        }}
+      />
 
       <p className="mt-6 text-center text-sm text-ink-soft">
         Don't have an account?{" "}
