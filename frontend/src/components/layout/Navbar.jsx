@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   Search,
-  Home as HomeIcon,
   MessageCircle,
   Bell,
   Heart,
@@ -56,37 +55,27 @@ export default function Navbar() {
     <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur">
       <div className="h-1 bg-gradient-to-r from-brand-500 via-brand-600 to-gold-500" />
       {/* Main row: logo, search, quick links, account */}
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
+      <div className="mx-auto flex h-16 max-w-6xl items-center gap-8 px-6 lg:px-16">
         <Link to="/" className="shrink-0">
           <Logo />
         </Link>
-
-        <form onSubmit={handleSearchSubmit} className="relative hidden flex-1 max-w-md md:block">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-soft" strokeWidth={1.75} />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search businesses, cafes, shops..."
-            className="h-10 w-full rounded-xl border border-border bg-surface-sunken pl-9 pr-3 text-sm text-ink outline-none transition-colors placeholder:text-ink-soft focus:border-brand-400 focus:bg-white"
-          />
-        </form>
 
         <NavLink to="/" end className={navLinkClass}>
           Home
         </NavLink>
 
-        <div className="ml-auto flex items-center gap-4">
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) =>
-              `hidden sm:block ${isActive ? "text-brand-600" : "text-ink-soft hover:text-brand-600"}`
-            }
-            title="Home"
-          >
-            <HomeIcon className="h-5 w-5" strokeWidth={1.75} />
-          </NavLink>
+        <form onSubmit={handleSearchSubmit} className="relative hidden w-48 md:block">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-soft" strokeWidth={1.75} />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search..."
+            className="h-9 w-full rounded-xl border border-border bg-surface-sunken pl-9 pr-3 text-sm text-ink outline-none transition-colors placeholder:text-ink-soft focus:border-brand-400 focus:bg-white"
+          />
+        </form>
+
+        <div className="ml-auto flex items-center gap-5">
           <Link to="/favorites" className="hidden text-ink-soft hover:text-brand-600 sm:block" title="Favorites">
             <Heart className="h-5 w-5" strokeWidth={1.75} />
           </Link>
@@ -99,12 +88,10 @@ export default function Navbar() {
 
           {isAuthenticated ? (
             <>
-              <Link
-                to="/seller"
-                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-gold-400 to-gold-500 px-5 py-2.5 text-base font-bold text-white shadow-md shadow-gold-400/30 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gold-400/40"
-              >
-                <Store className="h-5 w-5" strokeWidth={2} />
+              <Link to="/seller" className="sell-button-glow group relative flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-gold-500 via-gold-400 to-gold-500 px-6 py-2.5 text-base font-bold text-white shadow-lg shadow-gold-400/40 transition-transform duration-200 hover:scale-105">
+                <Store className="h-5 w-5 animate-[wiggle_2s_ease-in-out_infinite]" strokeWidth={2.25} />
                 Sell
+                <span aria-hidden="true" className="pointer-events-none absolute inset-0 -translate-x-full bg-white/30 group-hover:[animation:shine_0.9s_ease]" />
               </Link>
               <Link to="/seller" className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block">
                 Dashboard
@@ -115,21 +102,13 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <Link
-                to="/login?next=/seller"
-                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-gold-400 to-gold-500 px-5 py-2.5 text-base font-bold text-white shadow-md shadow-gold-400/30 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gold-400/40"
-              >
-                <Store className="h-5 w-5" strokeWidth={2} />
+              <Link to="/login?next=/seller" className="sell-button-glow group relative flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-gold-500 via-gold-400 to-gold-500 px-6 py-2.5 text-base font-bold text-white shadow-lg shadow-gold-400/40 transition-transform duration-200 hover:scale-105">
+                <Store className="h-5 w-5 animate-[wiggle_2s_ease-in-out_infinite]" strokeWidth={2.25} />
                 Sell
+                <span aria-hidden="true" className="pointer-events-none absolute inset-0 -translate-x-full bg-white/30 group-hover:[animation:shine_0.9s_ease]" />
               </Link>
               <Link to="/login" className="text-sm font-medium text-ink-soft hover:text-ink">
                 Log in
-              </Link>
-              <Link
-                to="/register"
-                className="rounded-xl bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-600 hover:shadow-md"
-              >
-                Sign up
               </Link>
             </>
           )}
