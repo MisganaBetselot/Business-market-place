@@ -4,11 +4,11 @@ const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api",
 });
 
-// NOTE: confirm with your team where the JWT access token actually gets
-// stored after login (localStorage key name may differ, or it might live
-// in a shared auth context / cookie instead).
+// Confirmed real key: "bm_access_token" (matches payments.js — see
+// api/listings.js for a third, now-outdated variant that also needs
+// updating to match).
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem("accessToken");
+  const token = localStorage.getItem("bm_access_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

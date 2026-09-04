@@ -1,10 +1,12 @@
+
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getMySubscriptions } from "../../api/sellerSubscriptions";
 
 // Temporary payment information.
-// Replace with real business payment details when available.
+// Replace with real business payment details when real payment
+// information is available.
 const DEMO_PAYMENT_INFO = {
   bankName: "Commercial Bank of Ethiopia (Demo)",
   accountName: "Business Marketplace PLC (Demo)",
@@ -34,6 +36,7 @@ function CopyIcon({ className }) {
         stroke="currentColor"
         strokeWidth="1.5"
       />
+
       <path
         d="M4.5 12.5H4a1.5 1.5 0 0 1-1.5-1.5V4A1.5 1.5 0 0 1 4 2.5h7A1.5 1.5 0 0 1 12.5 4v.5"
         stroke="currentColor"
@@ -53,12 +56,14 @@ function InfoIcon({ className }) {
         stroke="currentColor"
         strokeWidth="1.5"
       />
+
       <path
         d="M10 9v4.5"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
       />
+
       <circle cx="10" cy="6.7" r="0.9" fill="currentColor" />
     </svg>
   );
@@ -84,10 +89,15 @@ export default function PaymentInstructions() {
 
   const [copied, setCopied] = useState(false);
 
-  // Data passed from SubscriptionPlans.jsx
+  // Data passed from BusinessInformation.jsx
   const selectedPlan = location.state?.selectedPlan;
+  const listing = location.state?.listing;
+  const listingId = location.state?.listingId || listing?.id;
+  const subscriptionId = location.state?.subscriptionId;
 
-  // Get subscriptions from backend
+  // Get the seller's subscriptions from the backend.
+  // This is also useful if the page is refreshed and
+  // React Router navigation state disappears.
   const {
     data: subscriptionsData,
     isLoading,
@@ -98,26 +108,31 @@ export default function PaymentInstructions() {
     retry: false,
   });
 
-  // Handle normal array or paginated API response
+  // Handle both:
+  // 1. Normal array response
+  // 2. Paginated { results: [...] } response
   const subscriptions = Array.isArray(subscriptionsData)
     ? subscriptionsData
     : subscriptionsData?.results ?? [];
 
   /*
-    Prefer the plan selected on the previous page.
-    This means the correct plan can display immediately.
+    Prefer the exact subscription passed from BusinessInformation.
+
+    If the page was refreshed and subscriptionId is unavailable,
+    fall back to the seller's latest PENDING subscription.
   */
-  const plan = selectedPlan;
+  const selectedSubscription =
+    subscriptions.find((item) => item.id === subscriptionId) ||
+    subscriptions.find((item) => item.status === "PENDING");
 
-  // If the user refreshes the page, navigation state disappears.
-  // Then try to find a pending subscription from the backend.
-  const fallbackSubscription = subscriptions.find(
-    (item) => item.status === "PENDING"
-  );
+  const fallbackPlan = selectedSubscription?.plan;
 
-  const fallbackPlan = fallbackSubscription?.plan;
+  // Prefer the plan selected on the previous page.
+  const displayPlan = selectedPlan || fallbackPlan;
 
-  const displayPlan = plan || fallbackPlan;
+  // Keep the exact subscription ID whenever possible.
+  const currentSubscriptionId =
+    subscriptionId || selectedSubscription?.id;
 
   const durationLabel = displayPlan
     ? displayPlan.duration_label ??
@@ -146,6 +161,7 @@ export default function PaymentInstructions() {
     <div className="min-h-screen bg-cream px-6 py-12">
       <div className="mx-auto max-w-3xl">
 
+        {/* Page heading */}
         <h1 className="font-serif text-4xl font-bold text-charcoal">
           Payment Instructions
         </h1>
@@ -155,21 +171,25 @@ export default function PaymentInstructions() {
           account details below.
         </p>
 
+        {/* Loading state */}
         {isLoading && !selectedPlan && (
           <p className="mt-10 font-sans text-charcoal/60">
             Loading your subscription...
           </p>
         )}
 
+        {/* Error state */}
         {isError && !selectedPlan && (
           <p className="mt-10 font-sans text-sm text-red-700">
             Couldn't load your subscription. Please try again.
           </p>
         )}
 
+        {/* No subscription found */}
         {!isLoading &&
+          !isError &&
           !selectedPlan &&
-          !fallbackSubscription && (
+          !selectedSubscription && (
             <div className="mt-8 rounded-xl bg-white p-6 text-center">
               <p className="font-sans text-sm text-charcoal/70">
                 There's no pending subscription to pay for right now.
@@ -185,6 +205,7 @@ export default function PaymentInstructions() {
             </div>
           )}
 
+        {/* Plan and payment information */}
         {displayPlan && (
           <>
             {/* Selected plan */}
@@ -196,6 +217,7 @@ export default function PaymentInstructions() {
 
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
 
+                {/* Media type */}
                 <div>
                   <p className="font-sans text-sm text-charcoal/50">
                     Media type
@@ -208,6 +230,7 @@ export default function PaymentInstructions() {
                   </p>
                 </div>
 
+                {/* Duration */}
                 <div>
                   <p className="font-sans text-sm text-charcoal/50">
                     Duration
@@ -218,6 +241,7 @@ export default function PaymentInstructions() {
                   </p>
                 </div>
 
+                {/* Price */}
                 <div>
                   <p className="font-sans text-sm text-charcoal/50">
                     Price
@@ -244,12 +268,14 @@ export default function PaymentInstructions() {
                 receipt for administrator verification.
               </p>
 
+              {/* Payment information */}
               <div className="mt-6 rounded-lg bg-cream p-6">
 
                 <p className="font-sans text-xs font-semibold uppercase tracking-wide text-primary-dark">
                   Payment Information
                 </p>
 
+                {/* Bank name */}
                 <div className="mt-4">
                   <p className="font-sans text-sm text-charcoal/50">
                     Bank name
@@ -260,6 +286,7 @@ export default function PaymentInstructions() {
                   </p>
                 </div>
 
+                {/* Account name */}
                 <div className="mt-4">
                   <p className="font-sans text-sm text-charcoal/50">
                     Account name
@@ -270,6 +297,7 @@ export default function PaymentInstructions() {
                   </p>
                 </div>
 
+                {/* Account number */}
                 <div className="mt-4 flex items-end justify-between gap-4">
 
                   <div>
@@ -282,6 +310,7 @@ export default function PaymentInstructions() {
                     </p>
                   </div>
 
+                  {/* Copy button */}
                   <button
                     type="button"
                     onClick={handleCopy}
@@ -297,6 +326,7 @@ export default function PaymentInstructions() {
                 </div>
               </div>
 
+              {/* Important notice */}
               <div className="mt-6 flex items-start gap-3 rounded-lg border border-accent/40 bg-accent/10 p-4">
 
                 <InfoIcon className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
@@ -318,6 +348,7 @@ export default function PaymentInstructions() {
               {/* Navigation */}
               <div className="mt-6 flex items-center justify-between">
 
+                {/* Back */}
                 <button
                   type="button"
                   onClick={() => navigate("/sell/plans")}
@@ -327,12 +358,15 @@ export default function PaymentInstructions() {
                   Back
                 </button>
 
+                {/* Upload receipt */}
                 <button
                   type="button"
                   onClick={() =>
                     navigate("/sell/receipt", {
                       state: {
                         selectedPlan: displayPlan,
+                        listingId,
+                        subscriptionId: currentSubscriptionId,
                       },
                     })
                   }
@@ -350,3 +384,6 @@ export default function PaymentInstructions() {
     </div>
   );
 }
+
+
+

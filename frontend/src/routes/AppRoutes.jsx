@@ -18,11 +18,12 @@ import NotFound from "../pages/public/NotFound";
 
 // Owner: muni
 import Favorites from "../pages/account/Favorites";
-import SubscriptionPlans from "../pages/seller/SubscriptionPlans";
+// import SubscriptionPlans from "../pages/seller/SubscriptionPlans";
 import PaymentInstructions from "../pages/seller/PaymentInstructions";
 import ReceiptUpload from "../pages/seller/ReceiptUpload";
 import SubscriptionStatus from "../pages/seller/SubscriptionStatus";
 import MediaUpload from "../pages/seller/MediaUpload";
+import BusinessInformation from "../pages/seller/BusinessInformation";
 
 const router = createBrowserRouter([
   {
@@ -50,8 +51,9 @@ const router = createBrowserRouter([
           { path: "seller", element: <SellerDashboard /> },
           { path: "seller/products", element: <SellerProducts /> },
           { path: "seller/profile", element: <SellerProfile /> },
-          { path: "sell/plans", element: <SubscriptionPlans /> },
+          // { path: "sell/plans", element: <SubscriptionPlans /> },
           { path: "sell/payment-instructions", element: <PaymentInstructions /> },
+           { path: "sell/business-information", element: <BusinessInformation /> },
           { path: "sell/receipt", element: <ReceiptUpload /> },
           { path: "sell/subscription-status", element: <SubscriptionStatus /> },
           { path: "sell/listings/:id/media", element: <MediaUpload /> },

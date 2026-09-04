@@ -40,13 +40,22 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (payload) => {
-    const data = await authApi.register(payload);
-    tokenStorage.set(data.access, data.refresh);
-    const me = await usersApi.getMe();
-    setUser(me);
-    return data;
-  };
+  await authApi.register(payload);
 
+  // Registration endpoint creates the account but does not return tokens.
+  // Log in immediately to obtain access + refresh tokens.
+  const data = await authApi.login({
+    email: payload.email,
+    password: payload.password,
+  });
+
+  tokenStorage.set(data.access, data.refresh);
+
+  const me = await usersApi.getMe();
+  setUser(me);
+
+  return data;
+};
   const logout = () => {
     tokenStorage.clear();
     setUser(null);

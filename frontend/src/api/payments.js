@@ -26,10 +26,10 @@ const client = axios.create({
 });
 
 client.interceptors.request.use((config) => {
-  const token = localStorage.getItem("access_token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  const token = localStorage.getItem("bm_access_token");
+if (token) {
+  config.headers.Authorization = `Bearer ${token}`;
+}
   return config;
 });
 
@@ -43,7 +43,7 @@ client.interceptors.request.use((config) => {
 export async function uploadPaymentReceipt(sellerSubscriptionId, file, onProgress) {
   const formData = new FormData();
   formData.append("subscription", sellerSubscriptionId);
-  formData.append("file", file);
+ formData.append("receipt_file", file);
 
   const { data } = await client.post("/payments/", formData, {
     headers: { "Content-Type": "multipart/form-data" },

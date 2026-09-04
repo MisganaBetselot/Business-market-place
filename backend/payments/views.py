@@ -1,5 +1,6 @@
 from django.utils import timezone
-from rest_framework import generics, status
+
+from rest_framework import generics, serializers, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -20,8 +21,22 @@ class PaymentReceiptListCreateView(generics.ListCreateAPIView):
         ).order_by("-created_at")
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        subscription = serializer.validated_data["subscription"]
 
+        if subscription.user != self.request.user:
+            raise serializers.ValidationError(
+                {
+                    "subscription": (
+                        "You can only upload a receipt for your own subscription."
+                    )
+                }
+            )
+
+        receipt = serializer.save(user=self.request.user)
+
+        if subscription.status == "REJECTED":
+            subscription.status = "PENDING"
+            subscription.save(update_fields=["status", "updated_at"])
 
 class PaymentReceiptAdminListView(generics.ListAPIView):
     serializer_class = PaymentReceiptSerializer

@@ -7,7 +7,7 @@ import CategoryCard from "../../components/marketplace/CategoryCard";
 import ListingCard from "../../components/marketplace/ListingCard";
 import PhotoSlideshow from "../../components/layout/PhotoSlideshow";
 import { mockCategories, mockListings } from "../../data/mockData";
-
+import SubscriptionPlans from "../../components/home/SubscriptionPlans";
 const heroPhotos = [
   "https://images.unsplash.com/photo-1575663620136-5ebbfcc2c597?auto=format&fit=crop&w=1600&q=80",
   "https://images.unsplash.com/photo-1594402919317-9e67dca0a305?auto=format&fit=crop&w=1600&q=80",
@@ -90,6 +90,10 @@ export default function Home() {
           ))}
         </div>
       </section>
+      {/* Subscription Plans */}
+<section id="subscription-plans" className="bg-white py-10">
+  <SubscriptionPlans />
+</section>
 
       {/* Why Addis Gebeya, tinted section so the page isn't all white */}
       <section className="bg-surface-sunken py-10">

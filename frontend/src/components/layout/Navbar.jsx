@@ -41,6 +41,16 @@ const categoryIcons = {
 };
 
 export default function Navbar() {
+  const handleSellClick = () => {
+  if (window.location.pathname === "/") {
+    document.getElementById("subscription-plans")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  } else {
+    navigate("/#subscription-plans");
+  }
+};
   const { isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -87,31 +97,80 @@ export default function Navbar() {
           </Link>
 
           {isAuthenticated ? (
-            <>
-              <Link to="/seller" className="sell-button-glow group relative flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-gold-500 via-gold-400 to-gold-500 px-6 py-2.5 text-base font-bold text-white shadow-lg shadow-gold-400/40 transition-transform duration-200 hover:scale-105">
-                <Store className="h-5 w-5 animate-[wiggle_2s_ease-in-out_infinite]" strokeWidth={2.25} />
-                Sell
-                <span aria-hidden="true" className="pointer-events-none absolute inset-0 -translate-x-full bg-white/30 group-hover:[animation:shine_0.9s_ease]" />
-              </Link>
-              <Link to="/seller" className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block">
-                Dashboard
-              </Link>
-              <button onClick={logout} className="text-sm font-medium text-ink-soft hover:text-danger">
-                Log out
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to="/login?next=/seller" className="sell-button-glow group relative flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-gold-500 via-gold-400 to-gold-500 px-6 py-2.5 text-base font-bold text-white shadow-lg shadow-gold-400/40 transition-transform duration-200 hover:scale-105">
-                <Store className="h-5 w-5 animate-[wiggle_2s_ease-in-out_infinite]" strokeWidth={2.25} />
-                Sell
-                <span aria-hidden="true" className="pointer-events-none absolute inset-0 -translate-x-full bg-white/30 group-hover:[animation:shine_0.9s_ease]" />
-              </Link>
-              <Link to="/login" className="text-sm font-medium text-ink-soft hover:text-ink">
-                Log in
-              </Link>
-            </>
-          )}
+  <>
+    <button
+      type="button"
+      onClick={() => {
+        if (window.location.pathname === "/") {
+          document.getElementById("subscription-plans")?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        } else {
+          navigate("/");
+          setTimeout(() => {
+            document.getElementById("subscription-plans")?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          }, 100);
+        }
+      }}
+      className="sell-button-glow group relative flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-gold-500 via-gold-400 to-gold-500 px-6 py-2.5 text-base font-bold text-white shadow-lg shadow-gold-400/40 transition-transform duration-200 hover:scale-105"
+    >
+      <Store
+        className="h-5 w-5 animate-[wiggle_2s_ease-in-out_infinite]"
+        strokeWidth={2.25}
+      />
+      Sell
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -translate-x-full bg-white/30 group-hover:[animation:shine_0.9s_ease]"
+      />
+    </button>
+
+    <Link
+      to="/seller"
+      className="hidden text-sm font-medium text-ink-soft hover:text-ink sm:block"
+    >
+      Dashboard
+    </Link>
+
+    <button
+      onClick={logout}
+      className="text-sm font-medium text-ink-soft hover:text-danger"
+    >
+      Log out
+    </button>
+  </>
+) : (
+  <>
+    <button
+      type="button"
+      onClick={() => {
+        navigate("/login?next=/#subscription-plans");
+      }}
+      className="sell-button-glow group relative flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-gold-500 via-gold-400 to-gold-500 px-6 py-2.5 text-base font-bold text-white shadow-lg shadow-gold-400/40 transition-transform duration-200 hover:scale-105"
+    >
+      <Store
+        className="h-5 w-5 animate-[wiggle_2s_ease-in-out_infinite]"
+        strokeWidth={2.25}
+      />
+      Sell
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -translate-x-full bg-white/30 group-hover:[animation:shine_0.9s_ease]"
+      />
+    </button>
+
+    <Link
+      to="/login"
+      className="text-sm font-medium text-ink-soft hover:text-ink"
+    >
+      Log in
+    </Link>
+  </>
+)}
         </div>
       </div>
 
