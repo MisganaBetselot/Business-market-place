@@ -7,8 +7,9 @@ from .models import SubscriptionPlan
 class SubscriptionPlanAdmin(admin.ModelAdmin):
     list_display = [
         "name",
-        "media_type",
         "duration_days",
+        "photo_limit",
+        "video_link_allowed",
         "price",
         "is_active",
     ]
@@ -19,8 +20,8 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
     ]
 
     list_filter = [
-        "media_type",
         "is_active",
+        "video_link_allowed",
         "duration_days",
     ]
 

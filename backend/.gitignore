@@ -26,3 +26,5 @@ payment_receipts/
 .DS_Store
 Thumbs.db
 .env
+
+advertisement_receipts/

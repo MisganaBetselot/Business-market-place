@@ -18,4 +18,7 @@ urlpatterns = [
     ),
     path("api/reports/", include("reports.urls")),
     path("api/audit-logs/", include("audit_logs.urls")),
+    path("api/favorites/", include("favorites.urls")),
+path("api/advertisements/", include("advertisements.urls")),
+path("api/subscriptions/", include("subscriptions.urls")),
 ]

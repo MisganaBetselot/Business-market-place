@@ -5,6 +5,7 @@ from .views import (
     MediaApproveView,
     MediaListCreateView,
     MediaRejectView,
+    MediaStartReviewView,
 )
 
 urlpatterns = [
@@ -17,6 +18,11 @@ urlpatterns = [
         "admin/",
         MediaAdminListView.as_view(),
         name="media-admin-list",
+    ),
+    path(
+        "<int:pk>/review/",
+        MediaStartReviewView.as_view(),
+        name="media-start-review",
     ),
     path(
         "<int:pk>/approve/",

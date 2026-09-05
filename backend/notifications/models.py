@@ -18,6 +18,25 @@ class Notification(models.Model):
             "Subscription Expired",
         )
         REPORT_REVIEWED = "REPORT_REVIEWED", "Report Reviewed"
+        ADVERTISEMENT_PAYMENT_APPROVED = (
+            "ADVERTISEMENT_PAYMENT_APPROVED",
+            "Advertisement Payment Approved",
+        )
+
+        ADVERTISEMENT_PAYMENT_REJECTED = (
+            "ADVERTISEMENT_PAYMENT_REJECTED",
+            "Advertisement Payment Rejected",
+        )
+
+        ADVERTISEMENT_EXPIRING = (
+            "ADVERTISEMENT_EXPIRING",
+            "Advertisement Expiring",
+        )
+
+        ADVERTISEMENT_EXPIRED = (
+            "ADVERTISEMENT_EXPIRED",
+            "Advertisement Expired",
+    )
 
     id = models.BigAutoField(primary_key=True)
 

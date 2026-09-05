@@ -6,10 +6,12 @@ class AuditLog(models.Model):
     id = models.BigAutoField(primary_key=True)
 
     admin = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="audit_logs",
-    )
+    settings.AUTH_USER_MODEL,
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    related_name="audit_logs",
+)
 
     action = models.CharField(max_length=100)
 

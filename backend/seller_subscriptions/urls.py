@@ -1,7 +1,7 @@
-
 from django.urls import path
 
 from .views import (
+    SellerSubscriptionAdminListView,
     SellerSubscriptionDetailView,
     SellerSubscriptionListCreateView,
 )
@@ -11,6 +11,11 @@ urlpatterns = [
         "",
         SellerSubscriptionListCreateView.as_view(),
         name="seller-subscription-list-create",
+    ),
+    path(
+        "admin/",
+        SellerSubscriptionAdminListView.as_view(),
+        name="seller-subscription-admin-list",
     ),
     path(
         "<int:pk>/",

@@ -14,8 +14,11 @@ class BusinessListingSerializer(serializers.ModelSerializer):
         read_only=True,
     )
 
+    approved_media = serializers.SerializerMethodField()
+
     class Meta:
         model = BusinessListing
+
         fields = [
             "id",
             "seller",
@@ -33,6 +36,7 @@ class BusinessListingSerializer(serializers.ModelSerializer):
             "whatsapp",
             "contact_email",
             "status",
+            "approved_media",
             "created_at",
             "updated_at",
         ]
@@ -41,6 +45,45 @@ class BusinessListingSerializer(serializers.ModelSerializer):
             "id",
             "seller",
             "status",
+            "approved_media",
             "created_at",
             "updated_at",
         ]
+
+    def get_approved_media(self, obj):
+        media_items = getattr(
+            obj,
+            "approved_media",
+            obj.media.filter(
+                status="APPROVED"
+            ).select_related("subscription__plan"),
+        )
+
+        request = self.context.get("request")
+
+        results = []
+
+        for media in media_items:
+            file_url = None
+
+            if media.file_path:
+                file_url = media.file_path.url
+
+                if request:
+                    file_url = request.build_absolute_uri(
+                        file_url
+                    )
+
+            results.append(
+                {
+                    "id": media.id,
+                    "media_type": media.media_type,
+                    "file_path": file_url,
+                    "external_url": media.external_url,
+                    "description": media.description,
+                    "status": media.status,
+                    "created_at": media.created_at,
+                }
+            )
+
+        return results

@@ -8,6 +8,7 @@ class SellerSubscriptionAdmin(admin.ModelAdmin):
     list_display = [
         "user",
         "plan",
+        "business",
         "status",
         "start_date",
         "expiry_date",
@@ -17,6 +18,7 @@ class SellerSubscriptionAdmin(admin.ModelAdmin):
     search_fields = [
         "user__email",
         "plan__name",
+        "business__business_name",
     ]
 
     list_filter = [

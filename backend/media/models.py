@@ -9,8 +9,10 @@ class Media(models.Model):
 
     class Status(models.TextChoices):
         PENDING_REVIEW = "PENDING_REVIEW", "Pending Review"
+        UNDER_REVIEW = "UNDER_REVIEW", "Under Review"
         APPROVED = "APPROVED", "Approved"
         REJECTED = "REJECTED", "Rejected"
+        DEACTIVATED = "DEACTIVATED", "Deactivated"
 
     id = models.BigAutoField(primary_key=True)
 
@@ -32,7 +34,19 @@ class Media(models.Model):
     )
 
     file_path = models.FileField(
-        upload_to="business_media/"
+        upload_to="business_media/",
+        null=True,
+        blank=True,
+    )
+
+    external_url = models.URLField(
+        null=True,
+        blank=True,
+    )
+
+    description = models.TextField(
+        null=True,
+        blank=True,
     )
 
     status = models.CharField(
@@ -60,7 +74,7 @@ class Media(models.Model):
     )
 
     created_at = models.DateTimeField(
-        auto_now_add=True
+        auto_now_add=True,
     )
 
     def __str__(self):

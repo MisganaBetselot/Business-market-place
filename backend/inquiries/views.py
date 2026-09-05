@@ -1,12 +1,14 @@
-from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
+from django.db.models import Q
+from rest_framework import generics, status
 from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from notifications.models import Notification
+
 from .models import Inquiry
 from .serializers import InquirySerializer
-from notifications.models import Notification
 
 
 class InquiryListCreateView(generics.ListCreateAPIView):
@@ -16,18 +18,24 @@ class InquiryListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
 
-        return Inquiry.objects.filter(
-            buyer=user
-        ).union(
-            Inquiry.objects.filter(seller=user)
-        ).order_by("-created_at")
+        return (
+            Inquiry.objects
+            .filter(Q(buyer=user) | Q(seller=user))
+            .select_related("listing", "buyer", "seller")
+            .order_by("-created_at")
+        )
 
     def perform_create(self, serializer):
         listing = serializer.validated_data["listing"]
 
-        if listing.seller == self.request.user:
+        if listing.status != "ACTIVE":
             raise ValidationError(
-                {"detail": "You cannot send an inquiry to your own listing."}
+                {"listing": "You can only send inquiries about active listings."}
+            )
+
+        if listing.seller_id == self.request.user.id:
+            raise ValidationError(
+                {"listing": "You cannot send an inquiry to your own listing."}
             )
 
         inquiry = serializer.save(
@@ -54,14 +62,13 @@ class InquiryMarkReadView(APIView):
         except Inquiry.DoesNotExist:
             return Response(
                 {"detail": "Inquiry not found."},
-                status=404,
+                status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Only the seller can mark the inquiry as read
-        if inquiry.seller != request.user:
+        if inquiry.seller_id != request.user.id:
             return Response(
                 {"detail": "Only the seller can mark this inquiry as read."},
-                status=403,
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         inquiry.is_read = True

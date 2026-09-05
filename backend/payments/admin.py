@@ -9,6 +9,7 @@ class PaymentReceiptAdmin(admin.ModelAdmin):
         "id",
         "user",
         "subscription",
+        "get_business",
         "status",
         "reviewed_by",
         "reviewed_at",
@@ -18,6 +19,7 @@ class PaymentReceiptAdmin(admin.ModelAdmin):
     search_fields = [
         "user__email",
         "subscription__plan__name",
+        "subscription__business__business_name",
     ]
 
     list_filter = [
@@ -33,3 +35,12 @@ class PaymentReceiptAdmin(admin.ModelAdmin):
     ]
 
     ordering = ["-created_at"]
+
+    @admin.display(
+        description="Business"
+    )
+    def get_business(self, obj):
+        if obj.subscription.business:
+            return obj.subscription.business.business_name
+
+        return "-"

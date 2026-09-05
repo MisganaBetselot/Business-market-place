@@ -24,8 +24,23 @@ class SellerSubscription(models.Model):
         related_name="seller_subscriptions",
     )
 
-    start_date = models.DateTimeField(null=True, blank=True)
-    expiry_date = models.DateTimeField(null=True, blank=True)
+    business = models.ForeignKey(
+    "listings.BusinessListing",
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    related_name="seller_subscription",
+)
+
+    start_date = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    expiry_date = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
 
     status = models.CharField(
         max_length=20,
@@ -33,8 +48,13 @@ class SellerSubscription(models.Model):
         default=Status.PENDING,
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
 
     def __str__(self):
         return f"{self.user.email} - {self.plan.name}"

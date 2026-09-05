@@ -3,6 +3,7 @@ from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from users.permissions import IsAdminUser
 
 from audit_logs.models import AuditLog
 from notifications.models import Notification
@@ -36,13 +37,10 @@ class ReportListCreateView(generics.ListCreateAPIView):
 
 class ReportAdminListView(generics.ListAPIView):
     serializer_class = ReportSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
 
     def get_queryset(self):
-        if not self.request.user.is_admin:
-            return Report.objects.none()
-
-        return (
+        queryset = (
             Report.objects
             .select_related(
                 "reporter",
@@ -52,6 +50,15 @@ class ReportAdminListView(generics.ListAPIView):
             )
             .order_by("-created_at")
         )
+
+        report_status = self.request.query_params.get("status")
+
+        if report_status:
+            queryset = queryset.filter(
+                status=report_status
+            )
+
+        return queryset
 
 
 class ReportReviewView(APIView):
@@ -65,11 +72,15 @@ class ReportReviewView(APIView):
             )
 
         try:
-            report = Report.objects.select_related(
-                "reporter",
-                "listing",
-                "media",
-            ).get(pk=pk)
+            report = (
+                Report.objects
+                .select_related(
+                    "reporter",
+                    "listing",
+                    "media",
+                )
+                .get(pk=pk)
+            )
         except Report.DoesNotExist:
             return Response(
                 {"detail": "Report not found."},
@@ -112,26 +123,17 @@ class ReportReviewView(APIView):
                 "reviewed_at",
             ]
         )
-        AuditLog.objects.create(
-    admin=request.user,
-    action="REPORT_REVIEWED",
-    target_type="Report",
-    target_id=str(report.id),
-    notes=f"Report status changed to {review_status}.",
-)
 
         if review_status == Report.Status.DISMISSED:
             message = (
                 f"Your report #{report.id} has been "
                 "reviewed and dismissed."
             )
-
         elif review_status == Report.Status.ACTION_TAKEN:
             message = (
                 f"Action has been taken regarding "
                 f"your report #{report.id}."
             )
-
         else:
             message = (
                 f"Your report #{report.id} has been reviewed."
@@ -141,6 +143,17 @@ class ReportReviewView(APIView):
             user=report.reporter,
             type=Notification.NotificationType.REPORT_REVIEWED,
             message=message,
+        )
+
+        AuditLog.objects.create(
+            admin=request.user,
+            action="REPORT_REVIEWED",
+            target_type="Report",
+            target_id=str(report.id),
+            notes=(
+                f"Report #{report.id} changed to "
+                f"{review_status}."
+            ),
         )
 
         return Response(

@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     'reports',
     'notifications',
     'audit_logs',
+    'favorites',
+    'advertisements',
 ]
 
 MIDDLEWARE = [
@@ -140,11 +142,8 @@ STATIC_URL = 'static/'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = "noreply@businessmarketplace.local"
 AUTH_USER_MODEL = "users.User"
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
