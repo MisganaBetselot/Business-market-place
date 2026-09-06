@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 
 from audit_logs.models import AuditLog
 from notifications.models import Notification
+from listings.models import BusinessListing
 
 from .models import Media
 from .serializers import MediaSerializer
@@ -16,9 +17,15 @@ class MediaListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Media.objects.filter(
+        queryset = Media.objects.filter(
             listing__seller=self.request.user
         ).order_by("-created_at")
+
+        listing_id = self.request.query_params.get("listing")
+        if listing_id:
+            queryset = queryset.filter(listing_id=listing_id)
+
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save()
@@ -69,20 +76,40 @@ class MediaApproveView(APIView):
         media.reviewed_at = now
         media.rejection_reason = None
         media.save()
+
+        # NEW: media approval IS the publish action - no separate manual
+        # "publish listing" step exists or should exist. The admin has
+        # already reviewed the content; requiring a second click to
+        # actually make the listing visible would be redundant work and
+        # a confusing extra pending state for the seller. Only flip
+        # DRAFT -> ACTIVE - never touch SOLD or SUSPENDED, those are
+        # deliberate states that approving a photo shouldn't undo.
+        listing = media.listing
+        listing_was_published = False
+        if listing.status == BusinessListing.Status.DRAFT:
+            listing.status = BusinessListing.Status.ACTIVE
+            listing.save(update_fields=["status", "updated_at"])
+            listing_was_published = True
+
         AuditLog.objects.create(
-    admin=request.user,
-    action="MEDIA_APPROVED",
-    target_type="Media",
-    target_id=str(media.id),
-    notes=f"Media for {media.listing.business_name} approved.",
-)
+            admin=request.user,
+            action="MEDIA_APPROVED",
+            target_type="Media",
+            target_id=str(media.id),
+            notes=(
+                f"Media for {media.listing.business_name} approved."
+                + (" Listing published (DRAFT -> ACTIVE)." if listing_was_published else "")
+            ),
+        )
 
         Notification.objects.create(
             user=media.listing.seller,
             type=Notification.NotificationType.MEDIA_APPROVED,
             message=(
-                f"Your media for {media.listing.business_name} "
-                "has been approved."
+                f"Your media for {media.listing.business_name} has been "
+                "approved and your listing is now live."
+                if listing_was_published
+                else f"Your media for {media.listing.business_name} has been approved."
             ),
         )
 
@@ -90,6 +117,7 @@ class MediaApproveView(APIView):
             {
                 "message": "Media approved successfully.",
                 "media": MediaSerializer(media).data,
+                "listing_status": listing.status,
             },
             status=status.HTTP_200_OK,
         )
@@ -137,15 +165,15 @@ class MediaRejectView(APIView):
         media.save()
 
         AuditLog.objects.create(
-    admin=request.user,
-    action="MEDIA_REJECTED",
-    target_type="Media",
-    target_id=str(media.id),
-    notes=(
-        f"Media for {media.listing.business_name} rejected. "
-        f"Reason: {reason}"
-    ),
-)
+            admin=request.user,
+            action="MEDIA_REJECTED",
+            target_type="Media",
+            target_id=str(media.id),
+            notes=(
+                f"Media for {media.listing.business_name} rejected. "
+                f"Reason: {reason}"
+            ),
+        )
 
         Notification.objects.create(
             user=media.listing.seller,

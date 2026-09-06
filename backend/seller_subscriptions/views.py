@@ -14,16 +14,17 @@ class SellerSubscriptionListCreateView(generics.ListCreateAPIView):
         return (
             SellerSubscription.objects
             .filter(user=self.request.user)
-            .select_related("plan")
+            .select_related("plan", "listing")
             .order_by("-created_at")
         )
 
     def perform_create(self, serializer):
         user = self.request.user
-        plan = serializer.validated_data["plan"]
+        listing = serializer.validated_data["listing"]
 
         existing_subscription = SellerSubscription.objects.filter(
             user=user,
+            listing=listing,
             status__in=[
                 SellerSubscription.Status.PENDING,
                 SellerSubscription.Status.ACTIVE,
@@ -32,26 +33,29 @@ class SellerSubscriptionListCreateView(generics.ListCreateAPIView):
 
         if existing_subscription:
             raise ValidationError(
-                {
-                    "detail": (
-                        "You already have a pending or active subscription."
-                    )
-                }
+                {"detail": "This listing already has a pending or active subscription."}
             )
 
-        serializer.save(
-            user=user,
-            status=SellerSubscription.Status.PENDING,
-        )
+        serializer.save(user=user, status=SellerSubscription.Status.PENDING)
 
 
-class SellerSubscriptionDetailView(generics.RetrieveAPIView):
+class SellerSubscriptionDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = SellerSubscriptionSerializer
     permission_classes = [IsAuthenticated]
+    # No PUT (full replace) — only partial updates, and only ever used by
+    # the frontend to swap {"plan": <id>} on a still-pending subscription.
+    http_method_names = ["get", "patch", "head", "options"]
 
     def get_queryset(self):
         return (
             SellerSubscription.objects
             .filter(user=self.request.user)
-            .select_related("plan")
+            .select_related("plan", "listing")
         )
+
+    def perform_update(self, serializer):
+        if serializer.instance.status != SellerSubscription.Status.PENDING:
+            raise ValidationError(
+                {"detail": "You can only change the plan while this subscription is still pending."}
+            )
+        serializer.save()

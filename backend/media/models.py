@@ -32,7 +32,14 @@ class Media(models.Model):
     )
 
     file_path = models.FileField(
-        upload_to="business_media/"
+        upload_to="business_media/",
+        blank=True,
+        null=True,
+    )
+
+    video_url = models.URLField(
+        blank=True,
+        null=True,
     )
 
     status = models.CharField(

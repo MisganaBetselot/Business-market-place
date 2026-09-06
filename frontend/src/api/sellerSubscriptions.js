@@ -4,16 +4,30 @@ import axiosClient from "./axiosClient";
 
 // Confirmed real path: GET /seller-subscriptions/ — backend filters to
 // the logged-in user automatically. There is NO /mine/ suffix.
+// (This has reverted to the wrong URL at least once before — if it
+// breaks again, check whether another tool/session is editing this
+// file independently.)
 export const getMySubscriptions = async () => {
   const response = await axiosClient.get("/seller-subscriptions/");
   return response.data;
 };
 
-// Alias for pages that use the longer name
-export const getMySellerSubscriptions = getMySubscriptions;
-
-export const createSellerSubscription = async (planId) => {
+// Now requires a listingId too, since the backend's SellerSubscription
+// model has a required "listing" FK as of today's migration.
+export const createSellerSubscription = async (planId, listingId) => {
   const response = await axiosClient.post("/seller-subscriptions/", {
+    plan: planId,
+    listing: listingId,
+  });
+
+  return response.data;
+};
+
+// Switch a still-PENDING subscription over to a different plan. Backend
+// rejects this once the subscription is no longer PENDING (see
+// SellerSubscriptionDetailView.perform_update).
+export const updateSellerSubscriptionPlan = async (subscriptionId, planId) => {
+  const response = await axiosClient.patch(`/seller-subscriptions/${subscriptionId}/`, {
     plan: planId,
   });
 
@@ -22,11 +36,12 @@ export const createSellerSubscription = async (planId) => {
 
 // NO renew endpoint exists on the backend yet (confirmed against the real
 // seller_subscriptions/urls.py — only "" and "<int:pk>/" are registered).
-// Throwing here on purpose instead of silently 404ing, so any caller finds
-// out immediately rather than chasing another mystery network error.
-// Replace this once/if the backend adds a real renew route.
+// Throwing here on purpose instead of silently 404ing.
 export const renewSubscription = async () => {
   throw new Error(
     "renewSubscription() is not implemented — no /renew/ endpoint exists on the backend yet."
   );
 };
+
+// Alias for SubscriptionStatus.jsx
+export { getMySubscriptions as getMySellerSubscriptions };

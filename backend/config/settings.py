@@ -138,6 +138,17 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Media files (user-uploaded photos, etc.)
+# NOTE: the Media model's file field already saves into a
+# "business_media/" subfolder itself (confirmed - original file_path
+# URLs were already "http://localhost:8000/business_media/<file>"
+# before MEDIA_URL/MEDIA_ROOT were even set). So MEDIA_URL must NOT
+# add a second "/business_media/" prefix on top of that, or URLs come
+# out doubled ("business_media/business_media/<file>"). Root prefix +
+# BASE_DIR as the root correctly lines up with where files already are.
+MEDIA_URL = '/'
+MEDIA_ROOT = BASE_DIR
+
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration

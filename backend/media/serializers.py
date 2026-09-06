@@ -25,6 +25,7 @@ class MediaSerializer(serializers.ModelSerializer):
             "subscription_status",
             "media_type",
             "file_path",
+            "video_url",
             "status",
             "reviewed_by",
             "reviewed_at",
@@ -88,5 +89,29 @@ class MediaSerializer(serializers.ModelSerializer):
                 f"This subscription only allows "
                 f"{subscription.plan.media_type.lower()} uploads."
             )
+
+        # Check photo limit
+        # FIX: was counting by subscription, but a single subscription
+        # can end up associated with multiple listings (subscriptions
+        # aren't currently tied 1:1 to a specific listing - confirmed
+        # live, subscription 6 was shared across listings 31/32/33).
+        # The plan's media allowance is meant to apply per LISTING (see
+        # "every business listing carries its own... media allowance"
+        # on SubscriptionStatus.jsx) - so count by listing, not
+        # subscription, so each listing gets its own fresh allowance.
+        if media_type == Media.MediaType.PHOTO:
+            media_limit = subscription.plan.media_limit
+
+            if media_limit is not None:
+                existing_photo_count = Media.objects.filter(
+                    listing=listing,
+                    media_type=Media.MediaType.PHOTO,
+                ).count()
+
+                if existing_photo_count >= media_limit:
+                    raise serializers.ValidationError(
+                        f"You have reached the maximum of {media_limit} photos "
+                        f"allowed by your subscription plan."
+                    )
 
         return attrs

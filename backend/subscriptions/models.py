@@ -22,6 +22,13 @@ class SubscriptionPlan(models.Model):
         decimal_places=2,
     )
 
+    # Maximum number of photos allowed for this plan.
+    # NULL means no photo limit / not applicable.
+    media_limit = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+
     description = models.TextField(
         null=True,
         blank=True,

@@ -11,6 +11,7 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
             "name",
             "media_type",
             "duration_days",
+            "media_limit",
             "price",
             "description",
             "is_active",

@@ -23,6 +23,13 @@ class SellerSubscription(models.Model):
         on_delete=models.PROTECT,
         related_name="seller_subscriptions",
     )
+    listing = models.ForeignKey(
+        "listings.BusinessListing",
+        on_delete=models.CASCADE,
+        related_name="subscriptions",
+        null=True,
+        blank=True,
+    )
 
     start_date = models.DateTimeField(null=True, blank=True)
     expiry_date = models.DateTimeField(null=True, blank=True)

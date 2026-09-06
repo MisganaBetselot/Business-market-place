@@ -1,8 +1,4 @@
-from rest_framework import generics
-from rest_framework.permissions import AllowAny, IsAuthenticated
-
-from .models import BusinessListing
-from .serializers import BusinessListingSerializer
+from django.http import Http404
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -68,7 +64,6 @@ class SaveListingView(APIView):
 
 
 class BusinessListingListCreateView(generics.ListCreateAPIView):
-    queryset = BusinessListing.objects.all().order_by("-created_at")
     serializer_class = BusinessListingSerializer
 
     def get_permissions(self):
@@ -77,11 +72,54 @@ class BusinessListingListCreateView(generics.ListCreateAPIView):
 
         return [IsAuthenticated()]
 
+    def get_queryset(self):
+        # FIX: previously returned every listing regardless of status,
+        # meaning DRAFT/SUSPENDED listings were publicly visible to
+        # anyone browsing - a real privacy issue (confirmed in the
+        # integration report). Visibility now depends on who's asking:
+        user = self.request.user if self.request.user.is_authenticated else None
+
+        # Admins see everything, including other sellers' drafts - needed
+        # for moderation.
+        if user and getattr(user, "is_admin", False):
+            return BusinessListing.objects.all().order_by("-created_at")
+
+        # A logged-in seller viewing their own listings (e.g. "My
+        # Listings" page) sees all of their own, any status - explicit
+        # opt-in via ?mine=true so this endpoint doesn't silently change
+        # behavior for a seller just browsing the public marketplace.
+        if user and self.request.query_params.get("mine") == "true":
+            return BusinessListing.objects.filter(seller=user).order_by("-created_at")
+
+        # Everyone else (anonymous buyers, or a seller not asking for
+        # their own listings) only ever sees published listings.
+        return BusinessListing.objects.filter(
+            status=BusinessListing.Status.ACTIVE
+        ).order_by("-created_at")
+
     def perform_create(self, serializer):
         serializer.save(seller=self.request.user)
 
 
 class BusinessListingDetailView(generics.RetrieveAPIView):
-    queryset = BusinessListing.objects.all()
     serializer_class = BusinessListingSerializer
     permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        # Unfiltered on purpose - visibility is enforced in get_object
+        # below, where we can distinguish "not found" from "not yours to
+        # see" and always respond 404 either way (never reveal that a
+        # private draft exists at this URL via a 403 instead of a 404).
+        return BusinessListing.objects.all()
+
+    def get_object(self):
+        listing = super().get_object()
+        user = self.request.user if self.request.user.is_authenticated else None
+
+        if listing.status == BusinessListing.Status.ACTIVE:
+            return listing
+
+        if user and (user == listing.seller or getattr(user, "is_admin", False)):
+            return listing
+
+        raise Http404

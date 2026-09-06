@@ -68,9 +68,15 @@ export async function getReceiptsForSubscription(sellerSubscriptionId) {
   const { data } = await client.get("/payments/", {
     params: { subscription: sellerSubscriptionId },
   });
-  return Array.isArray(data) ? data : data.results ?? [];
+  const list = Array.isArray(data) ? data : data.results ?? [];
+  // TODO: backend may ignore the ?subscription= filter (same pattern
+  // already confirmed for media's ?listing= filter) — filtering
+  // client-side as a safety net so "latest receipt" can never leak
+  // across different subscriptions.
+  return list.filter(
+    (item) => String(item.subscription) === String(sellerSubscriptionId)
+  );
 }
-
 /**
  * Convenience helper: fetch just the latest receipt for a seller
  * subscription, or null if none exists yet.
