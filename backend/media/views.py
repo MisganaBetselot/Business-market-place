@@ -3,7 +3,7 @@ from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
+from rest_framework.exceptions import ValidationError
 from audit_logs.models import AuditLog
 from notifications.models import Notification
 from listings.models import BusinessListing
@@ -30,6 +30,26 @@ class MediaListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save()
 
+from rest_framework.exceptions import ValidationError
+
+
+class MediaDeleteView(generics.DestroyAPIView):
+    serializer_class = MediaSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Ownership check: a seller can only ever delete their own media.
+        return Media.objects.filter(listing__seller=self.request.user)
+
+    def perform_destroy(self, instance):
+        # Once approved, media is live/public — removing it needs to be a
+        # deliberate separate feature later, not bundled into this same
+        # "clean up a rejected upload" action.
+        if instance.status == Media.Status.APPROVED:
+            raise ValidationError(
+                {"detail": "Approved media can't be removed here."}
+            )
+        instance.delete()
 
 class MediaAdminListView(generics.ListAPIView):
     serializer_class = MediaSerializer

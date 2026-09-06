@@ -12,14 +12,23 @@ import {
   Clock3,
   CheckCircle2,
   FileWarning,
+  Pencil,
 } from "lucide-react";
 import { getMySubscriptions } from "../../api/sellerSubscriptions";
-import { getMedia, uploadMedia } from "../../api/media";
+
+import { getMedia, uploadMedia, deleteMedia } from "../../api/media";
 
 const STEPS = ["Business Details", "Payment", "Review", "Media", "Published"];
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_FILE_BYTES = 8 * 1024 * 1024; // 8 MB
+
+// Confirmed against media/models.py: MediaType choices are only PHOTO and
+// VIDEO — there is no separate "VIDEO_LINK" type. Use VIDEO. The model
+// also already has a real `video_url` URLField and `file_path` is
+// nullable, so a file-less video-link row is genuinely valid at the
+// model level (not something we're forcing in from the frontend).
+const VIDEO_LINK_MEDIA_TYPE = "VIDEO";
 
 function formatDuration(days) {
   if (!days) return "";
@@ -39,6 +48,22 @@ function summarizeMedia(mediaItems) {
   if (anyPending) return { state: "PENDING" };
   if (allApproved) return { state: "APPROVED" };
   return { state: "NONE" };
+}
+
+function StatusBadge({ status }) {
+  return (
+    <span
+      className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium ${
+        status === "APPROVED"
+          ? "bg-brand-50 text-brand-600"
+          : status === "REJECTED"
+          ? "bg-danger/10 text-danger"
+          : "bg-gold-100 text-gold-500"
+      }`}
+    >
+      {status === "APPROVED" ? "Approved" : status === "REJECTED" ? "Rejected" : "Pending Review"}
+    </span>
+  );
 }
 
 function StepTracker({ currentStep }) {
@@ -85,17 +110,13 @@ export default function MediaUpload() {
 
   const [draftPhotos, setDraftPhotos] = useState([]);
   const [videoUrl, setVideoUrl] = useState("");
+  const [editingVideo, setEditingVideo] = useState(false);
+  const [videoLinkError, setVideoLinkError] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const [fileError, setFileError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const fileInputRef = useRef(null);
 
-  // Always fetch the real subscription list — never skip this just because
-  // navigation state happened to include a plan. The passed-through
-  // subscriptionId/selectedPlan can be stale or simply wrong (confirmed
-  // bug: a leftover subscription from a different listing got attached to
-  // an upload here). The one source of truth is: which ACTIVE subscription
-  // actually belongs to THIS listing, right now, according to the backend.
   const { data: subscriptionsData } = useQuery({
     queryKey: ["mySubscriptions"],
     queryFn: getMySubscriptions,
@@ -106,7 +127,7 @@ export default function MediaUpload() {
     : subscriptionsData?.results ?? [];
 
   const activeSubscription = subscriptions.find(
-    (s) => String(s.listing) === String(listingId) && s.status === "ACTIVE"
+    (s) => String(s.listing?.id) === String(listingId) && s.status === "ACTIVE"
   );
   const listing = location.state?.listing;
   const selectedPlan = activeSubscription
@@ -128,12 +149,33 @@ export default function MediaUpload() {
     queryFn: () => getMedia({ listingId }),
     enabled: !!listingId,
   });
-  // TODO: backend ignores the ?listing= filter entirely right now (confirmed
-  // live - request for listing=33 returned items from listings 31/32/33 all
-  // mixed together). Filtering client-side as a stopgap until fixed there.
-  const existingItems = (Array.isArray(existingMedia) ? existingMedia : existingMedia?.results ?? [])
+  const allExistingItems = (Array.isArray(existingMedia) ? existingMedia : existingMedia?.results ?? [])
     .filter((item) => String(item.listing) === String(listingId));
-  const existingCount = existingItems.length;
+
+  // Photos and the video link are two independent things — split them so
+  // the photo-slot limit never blocks the video link, and vice versa.
+  const existingItems = allExistingItems.filter((item) => item.media_type !== VIDEO_LINK_MEDIA_TYPE);
+  const videoItems = allExistingItems.filter((item) => item.media_type === VIDEO_LINK_MEDIA_TYPE);
+  const currentVideoItem =
+    videoItems.length > 0
+      ? [...videoItems].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
+      : null;
+  // Follows the same lifecycle as photos: locked while pending or already
+  // approved (changing an approved link should require going through
+  // review again, not silently swap what's already live), editable if
+  // there's none yet, it was rejected, or the seller explicitly chose to
+  // change it.
+  const videoLocked =
+    !!currentVideoItem && currentVideoItem.status !== "REJECTED" && !editingVideo;
+
+  // FIX: a REJECTED photo was counting against the plan's photo limit
+  // forever, blocking the seller from ever uploading a replacement once
+  // they'd hit the limit (confirmed live - 6 total uploads against a
+  // limit of 3, several rejected, still blocked). It's still shown below
+  // in the grid (so the seller knows to remove/replace it), but no
+  // longer counted toward "how many photos does this listing have" -
+  // matches the same fix applied server-side in media/serializers.py.
+  const existingCount = existingItems.filter((item) => item.status !== "REJECTED").length;
   const mediaSummary = summarizeMedia(existingItems);
 
   const totalUsed = existingCount + draftPhotos.length;
@@ -162,7 +204,7 @@ export default function MediaUpload() {
     const files = Array.from(fileList ?? []);
     if (files.length === 0) return;
 
-    if (remaining != null && draftPhotos.length + files.length > remaining) {
+    if (remaining != null && files.length > remaining) {
       setFileError(`You can only add ${remaining} more photo${remaining === 1 ? "" : "s"} on this plan.`);
       return;
     }
@@ -191,6 +233,8 @@ export default function MediaUpload() {
     });
   }
 
+  // Photos only now — the video link has its own mutation below and is no
+  // longer silently dropped when there are zero draft photos.
   const submitMutation = useMutation({
     mutationFn: async () => {
       for (const draft of draftPhotos) {
@@ -199,14 +243,6 @@ export default function MediaUpload() {
         formData.append("subscription", activeSubscription?.id);
         formData.append("media_type", "PHOTO");
         if (listingId) formData.append("listing", listingId);
-
-        // NOTE: video_url has no confirmed backend field yet (per the
-        // integration report — Media.file_path is a FileField only, no
-        // URL field exists). Sending it here as a best-effort guess;
-        // if the backend rejects/ignores it, that's expected until a
-        // real field is added — do not silently treat this as working.
-        if (videoUrl) formData.append("video_url", videoUrl);
-
         await uploadMedia(formData);
       }
     },
@@ -214,18 +250,59 @@ export default function MediaUpload() {
       queryClient.invalidateQueries({ queryKey: ["media", listingId] });
       queryClient.invalidateQueries({ queryKey: ["mySubscriptions"] });
       setDraftPhotos([]);
-      // Navigate back to the status page and flag that this was just
-      // submitted, so it can show a clear one-time confirmation banner
-      // instead of the seller having to notice the per-card state.
       navigate("/sell/subscription-status", {
         state: { justSubmittedMedia: true },
       });
     },
     onError: (err) => {
-      setSubmitError(
-        err.response?.data?.detail ||
-          "Couldn't submit your media. Please try again."
+      const data = err.response?.data;
+      const realMessage =
+        data?.detail ||
+        (Array.isArray(data?.non_field_errors) && data.non_field_errors[0]) ||
+        (data && typeof data === "object" && Object.values(data)[0]?.[0]);
+
+      setSubmitError(realMessage || "Couldn't submit your media. Please try again.");
+    },
+  });
+
+  // Separate, independent mutation for the video/social link — does not
+  // touch photos, is not affected by remaining photo slots, and submits
+  // for review the same way a photo does.
+  const videoLinkMutation = useMutation({
+    mutationFn: async () => {
+      const formData = new FormData();
+      if (listingId) formData.append("listing", listingId);
+      if (activeSubscription?.id) formData.append("subscription", activeSubscription.id);
+      formData.append("media_type", VIDEO_LINK_MEDIA_TYPE);
+      formData.append("video_url", videoUrl);
+      return uploadMedia(formData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["media", listingId] });
+      setVideoUrl("");
+      setEditingVideo(false);
+      setVideoLinkError("");
+    },
+    onError: (err) => {
+      const data = err.response?.data;
+      const realMessage =
+        data?.detail ||
+        (Array.isArray(data?.non_field_errors) && data.non_field_errors[0]) ||
+        (data && typeof data === "object" && Object.values(data)[0]?.[0]);
+      // Surface whatever the backend actually said — this is unconfirmed
+      // functionality, so the real error is more useful here than a
+      // generic fallback would be.
+      setVideoLinkError(
+        realMessage ||
+          "Couldn't save the link — the backend may not support this yet."
       );
+    },
+  });
+
+  const deleteMediaMutation = useMutation({
+    mutationFn: (mediaId) => deleteMedia(mediaId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["media", listingId] });
     },
   });
 
@@ -376,23 +453,22 @@ export default function MediaUpload() {
                       />
                       <div className="p-3">
                         <p className="truncate text-sm font-medium text-ink">
-                          {item.filename || `Photo #${item.id}`}
+                          {item.filename || `Photo ${existingItems.indexOf(item) + 1}`}
                         </p>
-                        <span
-                          className={`mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-medium ${
-                            item.status === "APPROVED"
-                              ? "bg-brand-50 text-brand-600"
-                              : item.status === "REJECTED"
-                              ? "bg-danger/10 text-danger"
-                              : "bg-gold-100 text-gold-500"
-                          }`}
-                        >
-                          {item.status === "APPROVED"
-                            ? "Approved"
-                            : item.status === "REJECTED"
-                            ? "Rejected"
-                            : "Pending Review"}
-                        </span>
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <StatusBadge status={item.status} />
+                          {item.status !== "APPROVED" && (
+                            <button
+                              type="button"
+                              onClick={() => deleteMediaMutation.mutate(item.id)}
+                              disabled={deleteMediaMutation.isPending}
+                              className="flex items-center gap-1 text-xs font-medium text-ink-soft transition hover:text-danger disabled:opacity-50"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Remove
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -474,37 +550,123 @@ export default function MediaUpload() {
                   ))}
                 </div>
               )}
+
+              {submitError && (
+                <p className="mt-4 rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-sm text-danger">
+                  {submitError}
+                </p>
+              )}
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  disabled={draftPhotos.length === 0 || submitMutation.isPending}
+                  onClick={() => submitMutation.mutate()}
+                  className="shrink-0 rounded-full bg-gold-500 px-8 py-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {submitMutation.isPending ? "Submitting..." : "Submit Photos for Review"}
+                </button>
+              </div>
             </div>
 
+            {/* Video / social link — fully independent of the photo flow
+                above: its own status, its own submit action, never
+                blocked by photo slots and never blocking them either.
+                NOTE: intended to be available on every plan, per product
+                direction — but the backend currently rejects this for
+                non-Video-type plans ("This subscription only allows
+                photo uploads."). That's a backend-side restriction that
+                needs removing too; this frontend gate alone doesn't
+                control whether the submission actually succeeds. */}
             <div className="rounded-2xl border border-border bg-surface p-7 sm:p-9">
-              <h3 className="flex items-center gap-2 font-display text-xl font-bold text-ink">
-                <Link2 className="h-5 w-5 text-brand-600" />
-                Video / Social Media
-              </h3>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="flex items-center gap-2 font-display text-xl font-bold text-ink">
+                  <Link2 className="h-5 w-5 text-brand-600" />
+                  Video / Social Media
+                </h3>
+                {currentVideoItem && !editingVideo && (
+                  <StatusBadge status={currentVideoItem.status} />
+                )}
+              </div>
               <p className="mt-2 text-sm text-ink-soft">
                 We don't host videos. Paste a link to YouTube, TikTok,
                 Instagram or Facebook and visitors will be redirected to
-                your page.
+                your page. Like photos, this is reviewed by an administrator
+                before it goes live — and changing an approved link sends
+                it back for review rather than updating it instantly.
               </p>
-              <input
-                type="url"
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-                placeholder="Paste video or social media URL"
-                className="mt-4 w-full rounded-full border border-border bg-surface px-5 py-3 text-sm text-ink outline-none transition focus:border-brand-400"
-              />
-              <p className="mt-2 flex items-start gap-1.5 text-xs text-ink-soft">
-                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                Backend support for saving this link is still being
-                confirmed with the team — it may not persist yet.
-              </p>
-            </div>
 
-            {submitError && (
-              <p className="rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-sm text-danger">
-                {submitError}
-              </p>
-            )}
+              {currentVideoItem?.status === "REJECTED" && !editingVideo && (
+                <p className="mt-3 rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-sm text-danger">
+                  {currentVideoItem.rejection_reason || "Rejected — reason not provided."}
+                </p>
+              )}
+
+              {videoLocked ? (
+                <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-border bg-surface-sunken/60 px-5 py-3">
+                  <p className="truncate text-sm text-ink">
+                    {currentVideoItem.video_url || currentVideoItem.url || currentVideoItem.link}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVideoUrl(currentVideoItem.video_url || currentVideoItem.url || currentVideoItem.link || "");
+                      setEditingVideo(true);
+                    }}
+                    className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Change Link
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="url"
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    placeholder="Paste video or social media URL"
+                    className="mt-4 w-full rounded-full border border-border bg-surface px-5 py-3 text-sm text-ink outline-none transition focus:border-brand-400"
+                  />
+
+                  {videoLinkError && (
+                    <p className="mt-3 rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-sm text-danger">
+                      {videoLinkError}
+                    </p>
+                  )}
+
+                  <div className="mt-4 flex items-center justify-between gap-3">
+                    <p className="flex items-start gap-1.5 text-xs text-ink-soft">
+                      <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      Reviewed by an administrator before it appears on your listing.
+                    </p>
+                    <div className="flex shrink-0 gap-2">
+                      {editingVideo && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingVideo(false);
+                            setVideoUrl("");
+                            setVideoLinkError("");
+                          }}
+                          className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-surface-sunken"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        disabled={!videoUrl.trim() || videoLinkMutation.isPending}
+                        onClick={() => videoLinkMutation.mutate()}
+                        className="rounded-full bg-gold-500 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {videoLinkMutation.isPending ? "Saving..." : "Save Link for Review"}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
 
             <div className="flex items-center justify-between gap-4 border-t border-border pt-7">
               <button
@@ -515,21 +677,6 @@ export default function MediaUpload() {
                 <ArrowLeft className="h-4 w-4" />
                 Back
               </button>
-
-              <div className="flex items-center gap-4">
-                <p className="text-sm text-ink-soft">
-                  Submitted media stays private until an administrator
-                  approves it.
-                </p>
-                <button
-                  type="button"
-                  disabled={draftPhotos.length === 0 || submitMutation.isPending}
-                  onClick={() => submitMutation.mutate()}
-                  className="shrink-0 rounded-full bg-gold-500 px-8 py-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {submitMutation.isPending ? "Submitting..." : "Submit for Review"}
-                </button>
-              </div>
             </div>
           </div>
         </div>

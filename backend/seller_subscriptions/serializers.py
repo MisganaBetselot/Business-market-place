@@ -1,5 +1,8 @@
 from rest_framework import serializers
 
+from listings.serializers import BusinessListingSerializer
+from subscriptions.serializers import SubscriptionPlanSerializer
+
 from .models import SellerSubscription
 
 
@@ -34,3 +37,21 @@ class SellerSubscriptionSerializer(serializers.ModelSerializer):
                 "You can only create a subscription for your own listing."
             )
         return attrs
+
+    def to_representation(self, instance):
+        # FIX: `plan` and `listing` were only ever returned as raw ids,
+        # even though the frontend has been coded all along assuming
+        # full nested objects (subscription.plan.media_limit,
+        # subscription.listing.business_name, .status, .region, etc.).
+        # That mismatch is what caused "Untitled listing", missing
+        # photo-limit display, and the "Published" step never lighting
+        # up - all symptoms of this one gap, not separate bugs.
+        #
+        # Writes are unaffected: `plan`/`listing` still accept plain ids
+        # on POST via the normal PrimaryKeyRelatedField - this only
+        # changes what's returned on read.
+        data = super().to_representation(instance)
+        data["plan"] = SubscriptionPlanSerializer(instance.plan).data
+        if instance.listing_id:
+            data["listing"] = BusinessListingSerializer(instance.listing).data
+        return data

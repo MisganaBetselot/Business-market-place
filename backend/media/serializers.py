@@ -84,7 +84,13 @@ class MediaSerializer(serializers.ModelSerializer):
             )
 
         # Check media type against subscription plan
-        if subscription.plan.media_type != media_type:
+        # FIX: video links are meant to be independent of the plan
+        # type now (per product direction — plans are duration-only,
+        # video is an optional extra any seller can add, not a
+        # separate "video plan"). Only PHOTO uploads still need to
+        # match the plan's media_type; VIDEO links are allowed
+        # regardless of what type the plan is.
+        if media_type == Media.MediaType.PHOTO and subscription.plan.media_type != media_type:
             raise serializers.ValidationError(
                 f"This subscription only allows "
                 f"{subscription.plan.media_type.lower()} uploads."
@@ -99,6 +105,14 @@ class MediaSerializer(serializers.ModelSerializer):
         # "every business listing carries its own... media allowance"
         # on SubscriptionStatus.jsx) - so count by listing, not
         # subscription, so each listing gets its own fresh allowance.
+        #
+        # FIX 2: REJECTED photos were counting against the limit
+        # forever, blocking sellers from ever uploading a replacement
+        # once they'd hit the limit even once (confirmed live: 6 total
+        # uploads against a limit of 3, several rejected, upload still
+        # blocked). A rejected photo isn't going public, so it
+        # shouldn't count toward "how many photos does this listing
+        # have" - excluding it here.
         if media_type == Media.MediaType.PHOTO:
             media_limit = subscription.plan.media_limit
 
@@ -106,7 +120,7 @@ class MediaSerializer(serializers.ModelSerializer):
                 existing_photo_count = Media.objects.filter(
                     listing=listing,
                     media_type=Media.MediaType.PHOTO,
-                ).count()
+                ).exclude(status=Media.Status.REJECTED).count()
 
                 if existing_photo_count >= media_limit:
                     raise serializers.ValidationError(

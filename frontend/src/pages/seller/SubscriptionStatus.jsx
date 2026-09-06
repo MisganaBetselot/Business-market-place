@@ -86,6 +86,21 @@ function summarizeMedia(mediaItems) {
   return { state: "NONE" };
 }
 
+// Only the single most recent video submission matters (a seller can
+// replace/resubmit a video link, leaving older rejected/superseded
+// attempts behind it) - unlike photos, where every item that passed
+// review stays live at once.
+function summarizeVideo(videoItems) {
+  if (!videoItems || videoItems.length === 0) return { state: "NONE" };
+  const latest = [...videoItems].sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at)
+  )[0];
+  if (latest.status === "REJECTED") return { state: "REJECTED", item: latest };
+  if (latest.status === "PENDING_REVIEW") return { state: "PENDING", item: latest };
+  if (latest.status === "APPROVED") return { state: "APPROVED", item: latest };
+  return { state: "NONE" };
+}
+
 function ListingSubscriptionCard({ subscription, onUploadMedia, onResubmitPayment }) {
   const plan = subscription.plan;
   const listing = subscription.listing; // ASSUMPTION — see file-level note
@@ -98,15 +113,33 @@ function ListingSubscriptionCard({ subscription, onUploadMedia, onResubmitPaymen
   });
   const mediaItems = (Array.isArray(mediaData) ? mediaData : mediaData?.results ?? [])
     .filter((item) => String(item.listing) === String(listingId));
-  const mediaSummary = summarizeMedia(mediaItems);
+
+  // Photos and video are two independent things with independent review
+  // statuses - matches how MediaUpload.jsx already treats them. A
+  // combined single "Media" badge was hiding real information (e.g.
+  // photos fully approved but the video link still pending showed as
+  // just "Pending Review" overall, which is misleading).
+  const photoItems = mediaItems.filter((item) => item.media_type !== "VIDEO");
+  const videoItems = mediaItems.filter((item) => item.media_type === "VIDEO");
+  const mediaSummary = summarizeMedia(photoItems);
+  const videoSummary = summarizeVideo(videoItems);
 
   const durationLabel = plan?.duration_label ?? formatDuration(plan?.duration ?? plan?.duration_days);
   const badge = STATUS_BADGE[subscription.status] ?? STATUS_BADGE.PENDING;
   const currentStep = stepForSubscription(subscription, mediaItems);
 
-  const mediaUsed = mediaItems.length || subscription.media_used || listing?.media_used || 0;
+  // FIX: was mediaItems.length (all statuses, including REJECTED),
+  // which inflated the "used" count forever once anything got rejected
+  // - a rejected photo isn't going public, so it shouldn't count toward
+  // the plan's limit. Matches the same fix applied in
+  // media/serializers.py and MediaUpload.jsx.
+  const activeMediaCount = photoItems.filter((item) => item.status !== "REJECTED").length;
+  const mediaUsed = activeMediaCount || subscription.media_used || listing?.media_used || 0;
   const mediaLimit = plan?.media_limit ?? subscription.media_limit ?? null;
-  const videoUrl = listing?.video_url ?? null;
+  const videoUrl =
+    videoSummary.state === "APPROVED"
+      ? videoSummary.item?.video_url ?? listing?.video_url ?? null
+      : null;
 
   const businessName = listing?.business_name ?? "Untitled listing";
   const categoryLabel = listing?.category?.name ?? listing?.category_name ?? null;
@@ -312,7 +345,7 @@ export default function SubscriptionStatus() {
   const subscriptions = Array.isArray(data) ? data : data?.results ?? [];
 
   function handleUploadMedia(subscription) {
-    const listingId = subscription.listing;
+    const listingId = subscription.listing?.id;
     if (!listingId) return;
     navigate(`/sell/listings/${listingId}/media`, {
       state: { listingId, subscriptionId: subscription.id, selectedPlan: subscription.plan },
@@ -320,7 +353,7 @@ export default function SubscriptionStatus() {
   }
 
   function handleResubmitPayment(subscription) {
-    const listingId = subscription.listing;
+    const listingId = subscription.listing?.id;
     navigate("/sell/payment-instructions", {
       state: {
         selectedPlan: subscription.plan,

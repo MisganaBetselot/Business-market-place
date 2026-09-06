@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     MediaAdminListView,
     MediaApproveView,
+    MediaDeleteView,
     MediaListCreateView,
     MediaRejectView,
 )
@@ -17,6 +18,11 @@ urlpatterns = [
         "admin/",
         MediaAdminListView.as_view(),
         name="media-admin-list",
+    ),
+    path(
+        "<int:pk>/",
+        MediaDeleteView.as_view(),
+        name="media-delete",
     ),
     path(
         "<int:pk>/approve/",
