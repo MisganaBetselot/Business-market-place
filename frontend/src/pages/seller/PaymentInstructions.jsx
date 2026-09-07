@@ -21,7 +21,7 @@ const DEMO_PAYMENT_INFO = {
 };
 
 const STATUS = {
-  PENDING: { label: "Payment Pending", badge: "bg-amber-100 text-amber-800" },
+  PENDING: { label: "Awaiting Payment", badge: "bg-amber-100 text-amber-800" },
   UNDER_REVIEW: { label: "Receipt Under Review", badge: "bg-purple-100 text-purple-800" },
   APPROVED: { label: "Approved", badge: "bg-green-100 text-green-800" },
   REJECTED: { label: "Rejected", badge: "bg-red-100 text-red-800" },

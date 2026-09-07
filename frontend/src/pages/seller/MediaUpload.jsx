@@ -115,6 +115,7 @@ export default function MediaUpload() {
   const [dragActive, setDragActive] = useState(false);
   const [fileError, setFileError] = useState("");
   const [submitError, setSubmitError] = useState("");
+  const [justSubmittedPhotos, setJustSubmittedPhotos] = useState(false);
   const fileInputRef = useRef(null);
 
   const { data: subscriptionsData } = useQuery({
@@ -235,6 +236,13 @@ export default function MediaUpload() {
 
   // Photos only now — the video link has its own mutation below and is no
   // longer silently dropped when there are zero draft photos.
+  //
+  // FIX: this used to navigate(/sell/subscription-status) immediately on
+  // success — which whisked the seller away before they'd even noticed
+  // the independent Video/Social Media card lower on this same page,
+  // meaning it effectively never got seen or used. Stay on this page and
+  // show an inline confirmation instead; leaving is now the seller's own
+  // choice via the Back button.
   const submitMutation = useMutation({
     mutationFn: async () => {
       for (const draft of draftPhotos) {
@@ -250,9 +258,7 @@ export default function MediaUpload() {
       queryClient.invalidateQueries({ queryKey: ["media", listingId] });
       queryClient.invalidateQueries({ queryKey: ["mySubscriptions"] });
       setDraftPhotos([]);
-      navigate("/sell/subscription-status", {
-        state: { justSubmittedMedia: true },
-      });
+      setJustSubmittedPhotos(true);
     },
     onError: (err) => {
       const data = err.response?.data;
@@ -324,6 +330,20 @@ export default function MediaUpload() {
 
         <StepTracker currentStep={4} />
 
+        {justSubmittedPhotos && (
+          <div className="mt-8 flex items-start gap-3 rounded-2xl border border-brand-400 bg-brand-50 px-6 py-5">
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" />
+            <div>
+              <p className="text-sm font-semibold text-ink">Photos submitted for review</p>
+              <p className="mt-1 text-sm text-ink-soft">
+                Don't forget — if you also want to add a video or social
+                media link, that's a separate step below and isn't
+                submitted automatically with your photos.
+              </p>
+            </div>
+          </div>
+        )}
+
         {mediaSummary.state === "PENDING" && (
           <div className="mt-8 flex items-start gap-3 rounded-2xl border border-border bg-surface px-6 py-5">
             <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-gold-500" />
@@ -341,7 +361,7 @@ export default function MediaUpload() {
           <div className="mt-8 flex items-start gap-3 rounded-2xl border border-border bg-surface px-6 py-5">
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" />
             <div>
-              <p className="text-sm font-semibold text-ink">Media approved</p>
+              <p className="text-sm font-semibold text-ink">Photos approved</p>
               <p className="mt-1 text-sm text-ink-soft">
                 All submitted photos passed review and are now public on your listing.
               </p>
@@ -363,6 +383,27 @@ export default function MediaUpload() {
                 Upload replacement photos below, or add more if you have slots remaining.
               </p>
             </div>
+          </div>
+        )}
+
+        {/* Separate, dedicated status line for the video link — the
+            banners above only ever summarized photos, so an approved/
+            pending/rejected video link had no visible signal of its own
+            anywhere on this page. */}
+        {currentVideoItem && (
+          <div className="mt-4 flex items-center gap-3 rounded-2xl border border-border bg-surface px-6 py-4">
+            <Link2 className="h-4 w-4 shrink-0 text-brand-600" />
+            <p className="text-sm text-ink-soft">
+              Video/social link:{" "}
+              {currentVideoItem.status === "APPROVED"
+                ? "approved and live on your listing."
+                : currentVideoItem.status === "REJECTED"
+                ? "rejected — see the note below to fix it."
+                : "submitted, awaiting administrator review."}
+            </p>
+            <span className="ml-auto">
+              <StatusBadge status={currentVideoItem.status} />
+            </span>
           </div>
         )}
 
@@ -675,7 +716,7 @@ export default function MediaUpload() {
                 className="flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-surface-sunken"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Back
+                Back to Subscription Status
               </button>
             </div>
           </div>
