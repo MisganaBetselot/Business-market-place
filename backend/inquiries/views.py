@@ -15,12 +15,18 @@ class InquiryListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
+        role = self.request.query_params.get("role")
 
-        return Inquiry.objects.filter(
-            buyer=user
-        ).union(
-            Inquiry.objects.filter(seller=user)
-        ).order_by("-created_at")
+        qs = Inquiry.objects.all()
+
+        if role == "seller":
+            qs = qs.filter(seller=user)
+        elif role == "buyer":
+            qs = qs.filter(buyer=user)
+        else:
+            qs = qs.filter(buyer=user).union(qs.filter(seller=user))
+
+        return qs.order_by("-created_at")
 
     def perform_create(self, serializer):
         listing = serializer.validated_data["listing"]
@@ -57,7 +63,6 @@ class InquiryMarkReadView(APIView):
                 status=404,
             )
 
-        # Only the seller can mark the inquiry as read
         if inquiry.seller != request.user:
             return Response(
                 {"detail": "Only the seller can mark this inquiry as read."},

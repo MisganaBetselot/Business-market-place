@@ -3,6 +3,8 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from listings.views import SellerOverviewView
+
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -21,6 +23,11 @@ urlpatterns = [
     path("api/subscriptions/", include("subscriptions.urls")),
     path("api/reports/", include("reports.urls")),
     path("api/audit-logs/", include("audit_logs.urls")),
+    path(
+        "api/seller/overview/",
+        SellerOverviewView.as_view(),
+        name="seller-overview",
+    ),
 ]
 
 # Dev-only: serve uploaded media files (photos etc.) directly through

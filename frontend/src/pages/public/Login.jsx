@@ -36,6 +36,7 @@ export default function Login() {
 
   return (
     <AuthLayout
+      hideHeader
       eyebrow="Welcome back"
       title="Log in"
       subtitle="Pick up where you left off."

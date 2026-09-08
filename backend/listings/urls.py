@@ -5,6 +5,7 @@ from .views import (
     BusinessListingListCreateView,
     SavedListingListView,
     SaveListingView,
+    RecordViewView,
 )
 
 
@@ -31,5 +32,11 @@ urlpatterns = [
         "<int:pk>/",
         BusinessListingDetailView.as_view(),
         name="listing-detail",
+    ),
+
+    path(
+        "<int:pk>/view/",
+        RecordViewView.as_view(),
+        name="listing-record-view",
     ),
 ]

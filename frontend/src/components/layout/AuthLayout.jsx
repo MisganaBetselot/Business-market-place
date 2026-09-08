@@ -6,7 +6,7 @@ import Logo from "./Logo";
  * plain white page, kept from feeling flat with a couple of soft drifting
  * blur shapes behind it rather than a hard flat white.
  */
-export default function AuthLayout({ eyebrow, title, subtitle, children }) {
+export default function AuthLayout({ eyebrow, title, subtitle, children, hideHeader = false }) {
   return (
     <div className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden px-4 py-16">
       <div
@@ -20,19 +20,23 @@ export default function AuthLayout({ eyebrow, title, subtitle, children }) {
       />
 
       <div className="relative w-full max-w-md animate-fade-up rounded-2xl border border-border bg-white p-8 shadow-sm sm:p-10">
-        <Link to="/" className="mb-6 inline-block">
-          <Logo />
-        </Link>
+        {!hideHeader && (
+          <>
+            <Link to="/" className="mb-6 inline-block">
+              <Logo />
+            </Link>
 
-        {eyebrow && (
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-brand-500">
-            {eyebrow}
-          </p>
+            {eyebrow && (
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-brand-500">
+                {eyebrow}
+              </p>
+            )}
+            <h1 className="font-display text-2xl font-semibold text-ink sm:text-3xl">{title}</h1>
+            {subtitle && <p className="mt-2 text-sm text-ink-soft">{subtitle}</p>}
+          </>
         )}
-        <h1 className="font-display text-2xl font-semibold text-ink sm:text-3xl">{title}</h1>
-        {subtitle && <p className="mt-2 text-sm text-ink-soft">{subtitle}</p>}
 
-        <div className="mt-8">{children}</div>
+        <div className={hideHeader ? "" : "mt-8"}>{children}</div>
       </div>
     </div>
   );

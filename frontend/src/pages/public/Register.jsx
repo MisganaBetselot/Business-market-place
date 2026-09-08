@@ -66,6 +66,7 @@ export default function Register() {
 
   return (
     <AuthLayout
+      hideHeader
       eyebrow="Get started"
       title="Create your account"
       subtitle="One account for browsing, buying, and selling."

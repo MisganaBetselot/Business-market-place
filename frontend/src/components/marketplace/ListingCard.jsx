@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import { Card } from "../common/Card";
+import FavoriteButton from "../favorite/FavoriteButton";
+import ImageGallery from "../media/ImageGallery";
 
 export default function ListingCard({ listing }) {
   const price = listing.asking_price != null
@@ -8,27 +10,24 @@ export default function ListingCard({ listing }) {
 
   const location = [listing.city, listing.region].filter(Boolean).join(", ") || "Location TBD";
 
+  const images = (listing.images || []).map((img, idx) => ({
+    id: img.id || idx,
+    url: img.url || img.thumbnail_url || img,
+    thumbnail_url: img.thumbnail_url || img.url || img,
+  }));
+
   return (
     <Link to={`/business/${listing.id}`} className="block h-full">
-      <Card className="group flex h-full flex-col overflow-hidden border-2 border-brand-100 p-0 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md">
-        <div className="relative aspect-[4/3] w-full overflow-hidden bg-surface-sunken">
-          <div className="absolute inset-x-0 top-0 z-10 h-1 bg-gradient-to-r from-brand-500 to-gold-400" />
-          {listing.image ? (
-            <img
-              src={listing.image}
-              alt={listing.business_name || listing.title}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-brand-300">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <polyline points="21 15 16 10 5 21" />
-              </svg>
-            </div>
-          )}
+      <Card className="group flex h-full flex-col overflow-hidden border-2 border-brand-100 p-0 transition-all duration-200 hover:-translate-y-1 hover:border-brand-500 hover:shadow-lg hover:shadow-brand-500/20">
+        <div className="relative">
+          <ImageGallery
+            images={images}
+            alt={listing.business_name || listing.title}
+            variant="compact"
+          />
+          <div className="absolute right-2.5 top-2.5 z-20">
+            <FavoriteButton listing={listing} size="sm" />
+          </div>
         </div>
         <div className="flex flex-1 flex-col gap-2 p-3">
           <h3 className="line-clamp-2 text-sm font-medium leading-snug text-ink">

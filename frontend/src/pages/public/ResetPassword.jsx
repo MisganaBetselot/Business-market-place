@@ -22,6 +22,7 @@ export default function ResetPassword() {
 
   return (
     <AuthLayout
+      hideHeader
       eyebrow="Account recovery"
       title={isConfirmStep ? "Choose a new password" : "Reset your password"}
       subtitle={isConfirmStep ? undefined : "Enter your email and we'll send you a link to reset it."}
