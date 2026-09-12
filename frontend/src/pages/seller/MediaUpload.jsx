@@ -716,7 +716,7 @@ export default function MediaUpload() {
                 className="flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-surface-sunken"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Back to Subscription Status
+               Save and Back to Subscription Status
               </button>
             </div>
           </div>
