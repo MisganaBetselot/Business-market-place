@@ -1,5 +1,5 @@
 from rest_framework import serializers
-
+from media.models import Media
 from .models import BusinessListing
 
 
@@ -9,9 +9,9 @@ class MediaSerializer(serializers.ModelSerializer):
     thumbnail_url = serializers.SerializerMethodField()
 
     class Meta:
-        model = "media.Media"
+        model = Media
         fields = ["id", "url", "thumbnail_url", "media_type", "status"]
-
+        
     def get_url(self, obj):
         if obj.file_path:
             request = self.context.get("request")

@@ -87,6 +87,12 @@ function VideoIcon({ className }) {
   );
 }
 
+// Style notes: feature icons, the checkmarks, and the "About this plan"
+// link use the gold accent color instead of brand green, matching the
+// updated PlansPage.jsx card. The "Choose Plan" button is unified across
+// all plans (premium or not) — white background, green border/text,
+// flipping to solid green with white text on hover/active. Keep this in
+// sync with the PlanCard in PlansPage.jsx if the card design changes.
 function PlanCard({ plan, onChoose }) {
   const [showAbout, setShowAbout] = useState(false);
 
@@ -142,16 +148,16 @@ function PlanCard({ plan, onChoose }) {
       <div className="mt-5 space-y-2 border-t border-border pt-5">
         {plan.media_limit != null && (
           <p className="flex items-center gap-2 font-sans text-sm text-ink">
-            <CameraIcon className="h-4 w-4 shrink-0 text-brand-600" />
+            <CameraIcon className="h-4 w-4 shrink-0 text-gold-500" />
             Up to {plan.media_limit} photos
           </p>
         )}
         <p className="flex items-center gap-2 font-sans text-sm text-ink">
-          <VideoIcon className="h-4 w-4 shrink-0 text-brand-600" />
+          <VideoIcon className="h-4 w-4 shrink-0 text-gold-500" />
           Video or social media link included
         </p>
         <p className="flex items-center gap-2 font-sans text-sm text-ink">
-          <ClockIcon className="h-4 w-4 shrink-0 text-brand-600" />
+          <ClockIcon className="h-4 w-4 shrink-0 text-gold-500" />
           Listing active for {durationLabel.toLowerCase()}
         </p>
       </div>
@@ -167,7 +173,7 @@ function PlanCard({ plan, onChoose }) {
                 key={feature}
                 className="flex items-start gap-2 font-sans text-sm text-ink"
               >
-                <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+                <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-gold-500" />
                 {feature}
               </li>
             ))}
@@ -178,7 +184,7 @@ function PlanCard({ plan, onChoose }) {
       <button
         type="button"
         onClick={() => setShowAbout((value) => !value)}
-        className="mt-5 flex items-center gap-1.5 font-sans text-sm text-ink-soft hover:text-ink"
+        className="mt-5 flex items-center gap-1.5 font-sans text-sm text-gold-500 hover:text-gold-600"
       >
         <InfoIcon className="h-3.5 w-3.5" />
         About this plan
@@ -194,13 +200,10 @@ function PlanCard({ plan, onChoose }) {
       <button
         type="button"
         onClick={() => onChoose(plan)}
-        className={`mt-6 w-full cursor-pointer rounded-full py-2.5 font-sans text-sm font-semibold shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
-          plan.is_premium
-            ? "bg-gold-500 text-white hover:brightness-95"
-            : "border-2 border-gold-400 bg-gold-100/40 text-gold-500 hover:bg-gold-100"
-        }`}
+        className="mt-6 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-brand-600 py-2.5 font-sans text-sm font-semibold text-white shadow-sm transition duration-200 hover:opacity-90 hover:blur-[1.5px] active:opacity-100 active:blur-0"
       >
         Choose Plan
+        <span aria-hidden="true">→</span>
       </button>
     </div>
   );
@@ -257,7 +260,7 @@ export default function SubscriptionPlans() {
         )}
 
         {!isLoading && !isError && plans.length > 0 && (
-          <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-3 sm:gap-10">
             {plans.slice(0, 3).map((plan) => (
               <PlanCard
                 key={plan.id}

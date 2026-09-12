@@ -97,6 +97,10 @@ h1, h2, h3, .font-display {
   from { transform: translateX(-120%) skewX(-15deg); }
   to { transform: translateX(220%) skewX(-15deg); }
 }
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
 
 .animate-fade-up {
   animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -107,6 +111,9 @@ h1, h2, h3, .font-display {
 .animate-drift {
   animation: drift 14s ease-in-out infinite;
 }
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
 
 .stagger-1 { animation-delay: 0.05s; }
 .stagger-2 { animation-delay: 0.12s; }
@@ -114,7 +121,7 @@ h1, h2, h3, .font-display {
 .stagger-4 { animation-delay: 0.26s; }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-up, .animate-fade-in, .animate-drift {
+  .animate-fade-up, .animate-fade-in, .animate-drift, .animate-marquee {
     animation: none !important;
   }
 }
