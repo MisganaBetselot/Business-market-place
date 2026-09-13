@@ -1802,7 +1802,7 @@ function MessagesSection() {
                         Mark read
                       </Button>
                     )}
-                    <Link to="/messages">
+                    <Link to={`/messages?inquiry=${inquiry.id}`}>
                       <Button size="sm" variant="ghost">
                         Reply
                       </Button>
@@ -1999,11 +1999,11 @@ export default function SellerDashboard() {
 
         <div className="flex gap-6">
           {/* Sidebar */}
-          <aside className={`fixed inset-0 z-50 md:static md:block md:w-56 ${sidebarOpen ? "" : "hidden md:block"}`}>
+          <aside className={`fixed inset-0 z-50 md:static md:block md:w-64 ${sidebarOpen ? "" : "hidden md:block"}`}>
             {sidebarOpen && (
               <div className="absolute inset-0 bg-ink/40 md:hidden" onClick={() => setSidebarOpen(false)} />
             )}
-            <div className={`relative md:relative w-64 shrink-0 rounded-xl border border-border bg-surface p-4 ${sidebarOpen ? "absolute left-4 top-4 md:static" : ""}`}>
+            <div className={`relative md:relative  shrink-0 rounded-xl border border-border bg-surface p-4 ${sidebarOpen ? "absolute left-4 top-4 md:static" : ""}`}>
               <div className="hidden md:block mb-4">
                 <h2 className="font-display text-lg font-semibold text-ink">Seller Dashboard</h2>
                 <p className="text-xs text-ink-soft">{user?.first_name || "Seller"}</p>
