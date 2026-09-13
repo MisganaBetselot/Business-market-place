@@ -1,3 +1,4 @@
+from django.db.models import Sum
 from django.http import Http404
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -167,6 +168,9 @@ class SellerOverviewView(APIView):
             "suspended": listings.filter(status=BusinessListing.Status.SUSPENDED).count(),
         }
 
+        total_views = listings.aggregate(total=Sum("views"))["total"] or 0
+        saved_businesses_count = SavedListing.objects.filter(user=user).count()
+
         unread_inquiries = 0
         try:
             from inquiries.models import Inquiry
@@ -205,6 +209,8 @@ class SellerOverviewView(APIView):
 
         return Response({
             "listing_counts": listing_counts,
+            "total_views": total_views,
+            "saved_businesses_count": saved_businesses_count,
             "unread_inquiries": unread_inquiries,
             "unread_notifications": unread_notifications,
             "subscription": subscription,

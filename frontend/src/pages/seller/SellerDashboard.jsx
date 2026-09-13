@@ -1,12 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getCategories } from "../../api/categories";
+import api from "../../api/client";
 import Button from "../../components/common/Button";
 import Input from "../../components/common/Input";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
-import api from "../../api/client";
-import { getCategories } from "../../api/categories";
+import { useAuth } from "../../hooks/useAuth";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: "📊" },
@@ -72,8 +72,117 @@ function emptyState(title, subtitle, cta) {
 /*  Overview Section                                                   */
 /* ------------------------------------------------------------------ */
 
+function initials(user) {
+  const a = (user?.first_name || "").trim()[0] ?? "";
+  const b = (user?.last_name || "").trim()[0] ?? "";
+  return (a + b).toUpperCase() || "?";
+}
+
+function formatCurrency(value) {
+  if (value == null) return "—";
+  return `ETB ${Number(value).toLocaleString()}`;
+}
+
+const OVERVIEW_LISTING_BADGE = {
+  ACTIVE: { label: "Live", className: "bg-brand-50 text-brand-600" },
+  DRAFT: { label: "Draft", className: "bg-surface-sunken text-ink-soft" },
+  SOLD: { label: "Sold", className: "bg-blue-50 text-blue-600" },
+  SUSPENDED: { label: "Suspended", className: "bg-danger/10 text-danger" },
+};
+
+function ProfileCard({ user, isLoading }) {
+  if (isLoading) {
+    return (
+      <div className="rounded-xl border border-border bg-surface p-5 animate-pulse">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-full bg-surface-sunken" />
+          <div className="h-4 w-32 rounded bg-surface-sunken" />
+        </div>
+        <div className="mt-5 space-y-3">
+          <div className="h-3 w-3/4 rounded bg-surface-sunken" />
+          <div className="h-3 w-2/3 rounded bg-surface-sunken" />
+          <div className="h-3 w-1/2 rounded bg-surface-sunken" />
+        </div>
+      </div>
+    );
+  }
+
+  const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || "Seller";
+
+  return (
+    <div className="rounded-xl border border-border bg-surface p-5">
+      <div className="flex items-center gap-3">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-600 font-semibold text-white">
+          {initials(user)}
+        </div>
+        <p className="font-display text-lg font-semibold text-ink">{fullName}</p>
+      </div>
+
+      <div className="mt-4 space-y-2.5 text-sm text-ink-soft">
+        {user?.phone && (
+          <div className="flex items-center gap-2">
+            <span aria-hidden="true">📞</span>
+            <span>{user.phone}</span>
+          </div>
+        )}
+        {user?.email && (
+          <div className="flex items-center gap-2">
+            <span aria-hidden="true">✉️</span>
+            <span>{user.email}</span>
+          </div>
+        )}
+      </div>
+
+      {user?.created_at && (
+        <>
+          <div className="my-4 border-t border-border" />
+          <p className="text-xs text-ink-soft">Member since {formatDate(user.created_at)}</p>
+        </>
+      )}
+    </div>
+  );
+}
+
+function OverviewListingRow({ listing }) {
+  const thumb = listing.images?.[0]?.thumbnail_url || listing.images?.[0]?.url;
+  const badge = badgeFor(listing.status, OVERVIEW_LISTING_BADGE);
+
+  return (
+    <div className="flex items-center gap-4 border-b border-border py-4 last:border-0">
+      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-sunken">
+        {thumb ? (
+          <img src={thumb} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-ink-soft" aria-hidden="true">🏢</div>
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-display text-base font-semibold text-ink">{listing.business_name}</p>
+        <p className="text-sm text-ink-soft">
+          {listing.category_name || "Uncategorized"} · {formatDate(listing.created_at)}
+        </p>
+      </div>
+
+      <div className="shrink-0 text-right">
+        <p className="font-semibold text-ink">{formatCurrency(listing.asking_price)}</p>
+        <span className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge.className}`}>
+          {badge.label}
+        </span>
+      </div>
+
+      <div className="hidden shrink-0 items-center gap-1 text-sm text-ink-soft sm:flex">
+        <span aria-hidden="true">👁</span>
+        {listing.views ?? 0}
+      </div>
+    </div>
+  );
+}
+
 function OverviewSection({ onNavigate }) {
-  const { data, isLoading, isError, error, refetch } = useQuery({
+  const { user } = useAuth();
+
+  const { data, isLoading } = useQuery({
     queryKey: ["seller", "overview"],
     queryFn: async () => {
       const { data } = await api.get("/seller/overview/");
@@ -82,61 +191,78 @@ function OverviewSection({ onNavigate }) {
     retry: false,
   });
 
+  const { data: listingsData, isLoading: listingsLoading } = useQuery({
+    queryKey: ["listings", "mine"],
+    queryFn: async () => {
+      const { data } = await api.get("/listings/", { params: { mine: "true" } });
+      return data;
+    },
+  });
+
+  const recentListings = useMemo(() => {
+    const raw = listingsData;
+    const arr = Array.isArray(raw) ? raw : raw?.results ?? [];
+    return [...arr]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 3);
+  }, [listingsData]);
+
   const listingCounts = data?.listing_counts ?? {};
-  const unreadInquiries = data?.unread_inquiries ?? 0;
-  const unreadNotifications = data?.unread_notifications ?? 0;
-  const subscription = data?.subscription ?? null;
-  const daysRemaining = data?.days_remaining ?? null;
+  const totalListings =
+    (listingCounts.draft ?? 0) + (listingCounts.active ?? 0) + (listingCounts.sold ?? 0) + (listingCounts.suspended ?? 0);
+  const totalViews = data?.total_views ?? 0;
+  const savedBusinesses = data?.saved_businesses_count ?? 0;
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <StatCard label="Active Listings" value={listingCounts.active ?? 0} />
-        <StatCard label="Draft" value={listingCounts.draft ?? 0} />
-        <StatCard label="Sold" value={listingCounts.sold ?? 0} />
-        <StatCard label="Suspended" value={listingCounts.suspended ?? 0} />
-        <StatCard label="Unread Inquiries" value={unreadInquiries} />
-        <StatCard label="Unread Notifications" value={unreadNotifications} />
+      <div className="grid gap-6 md:grid-cols-[280px_1fr]">
+        <ProfileCard user={user} isLoading={isLoading} />
+
+        <div className="grid grid-cols-2 gap-3">
+          {isLoading ? (
+            [...Array(4)].map((_, i) => (
+              <div key={i} className="h-20 animate-pulse rounded-xl border border-border bg-surface-sunken" />
+            ))
+          ) : (
+            <>
+              <StatCard label="Listings" value={totalListings} />
+              <StatCard label="Published" value={listingCounts.active ?? 0} />
+              <StatCard label="Total Views" value={totalViews.toLocaleString()} />
+              <StatCard label="Saved Businesses" value={savedBusinesses} />
+            </>
+          )}
+        </div>
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-5">
-        <h3 className="font-display text-lg font-semibold text-ink">Subscription</h3>
-        {isLoading ? (
-          <p className="mt-3 text-sm text-ink-soft">Loading…</p>
-        ) : subscription ? (
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${badgeFor(subscription.status, SUB_STATUS_BADGE).className}`}>
-              {badgeFor(subscription.status, SUB_STATUS_BADGE).label}
-            </span>
-            <span className="text-sm text-ink">
-              {subscription.status} · expires {formatDate(subscription.expiry_date)}
-            </span>
-            {daysRemaining !== null && (
-              <span className={`text-xs font-medium ${daysRemaining < 7 ? "text-danger" : "text-ink-soft"}`}>
-                {daysRemaining > 0 ? `${daysRemaining} days left` : daysRemaining === 0 ? "Expires today" : "Expired"}
-              </span>
-            )}
-            <Link to="/sell/subscription-status" className="text-sm font-medium text-brand-600 hover:underline">
-              Manage
-            </Link>
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="font-display text-lg font-semibold text-ink">My Listings</h3>
+          <button
+            type="button"
+            onClick={() => onNavigate("listings")}
+            className="text-sm font-medium text-brand-600 hover:underline"
+          >
+            View all
+          </button>
+        </div>
+
+        {listingsLoading ? (
+          <div className="space-y-4 py-2">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-14 animate-pulse rounded-lg bg-surface-sunken" />
+            ))}
           </div>
+        ) : recentListings.length === 0 ? (
+          emptyState("No listings yet", "Create your first listing to get started.", (
+            <Button size="sm" className="mt-4" onClick={() => onNavigate("add")}>Add Listing</Button>
+          ))
         ) : (
-          <div className="mt-3">
-            <Link to="/sell/plans">
-              <Button size="sm">Choose a Plan</Button>
-            </Link>
+          <div>
+            {recentListings.map((listing) => (
+              <OverviewListingRow key={listing.id} listing={listing} />
+            ))}
           </div>
         )}
-      </div>
-
-      <div className="rounded-xl border border-border bg-surface p-5">
-        <h3 className="font-display text-lg font-semibold text-ink">Quick Actions</h3>
-        <div className="mt-3 flex flex-wrap gap-3">
-          <Button size="sm" onClick={() => onNavigate("listings")}>Manage Listings</Button>
-          <Button size="sm" onClick={() => onNavigate("subscription")}>Subscription & Payments</Button>
-          <Link to="/sell/plans"><Button variant="secondary" size="sm">Plans & Pricing</Button></Link>
-          <Link to="/messages"><Button variant="secondary" size="sm">Messages</Button></Link>
-        </div>
       </div>
     </div>
   );
@@ -1907,11 +2033,37 @@ export default function SellerDashboard() {
 
           {/* Main Content */}
           <main className="flex-1">
-            <div className="hidden md:block mb-6">
-              <h1 className="font-display text-2xl font-semibold text-ink">
-                {activeTab === "overview"
-                  ? "Overview"
-                  : activeTab === "listings"
+            {activeTab === "overview" ? (
+              <div className="hidden md:flex mb-6 items-start justify-between gap-4">
+                <div>
+                  <h1 className="font-display text-2xl font-semibold text-ink">Seller Dashboard</h1>
+                  <p className="text-sm text-ink-soft">
+                    Welcome back, {user?.first_name || "seller"}. Here is how your listings are doing.
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("subscription")}
+                    className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink hover:bg-surface-sunken"
+                  >
+                    <span aria-hidden="true">📋</span>
+                    Subscription Status
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("add")}
+                    className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                  >
+                    <span aria-hidden="true">+</span>
+                    Add Listing
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="hidden md:block mb-6">
+                <h1 className="font-display text-2xl font-semibold text-ink">
+                  {activeTab === "listings"
                     ? "My Listings"
                     : activeTab === "add"
                       ? "New Listing"
@@ -1922,9 +2074,10 @@ export default function SellerDashboard() {
                           : activeTab === "messages"
                             ? "Messages"
                             : "Notifications"}
-              </h1>
-              <p className="text-sm text-ink-soft">Welcome back, {user?.first_name || "seller"}.</p>
-            </div>
+                </h1>
+                <p className="text-sm text-ink-soft">Welcome back, {user?.first_name || "seller"}.</p>
+              </div>
+            )}
 
             {activeTab === "overview" && (
               <OverviewSection onNavigate={setActiveTab} />

@@ -1,6 +1,6 @@
 // Owner: muni
 
-import axiosClient from "./axiosClient";
+import api from "./client";
 
 // Confirmed real path: GET /seller-subscriptions/ — backend filters to
 // the logged-in user automatically. There is NO /mine/ suffix.
@@ -8,14 +8,14 @@ import axiosClient from "./axiosClient";
 // breaks again, check whether another tool/session is editing this
 // file independently.)
 export const getMySubscriptions = async () => {
-  const response = await axiosClient.get("/seller-subscriptions/");
+  const response = await api.get("/seller-subscriptions/");
   return response.data;
 };
 
 // Now requires a listingId too, since the backend's SellerSubscription
 // model has a required "listing" FK as of today's migration.
 export const createSellerSubscription = async (planId, listingId) => {
-  const response = await axiosClient.post("/seller-subscriptions/", {
+  const response = await api.post("/seller-subscriptions/", {
     plan: planId,
     listing: listingId,
   });
@@ -27,7 +27,7 @@ export const createSellerSubscription = async (planId, listingId) => {
 // rejects this once the subscription is no longer PENDING (see
 // SellerSubscriptionDetailView.perform_update).
 export const updateSellerSubscriptionPlan = async (subscriptionId, planId) => {
-  const response = await axiosClient.patch(`/seller-subscriptions/${subscriptionId}/`, {
+  const response = await api.patch(`/seller-subscriptions/${subscriptionId}/`, {
     plan: planId,
   });
 

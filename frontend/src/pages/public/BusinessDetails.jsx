@@ -1,15 +1,16 @@
-import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
 import { Phone } from "lucide-react";
-import LoadingSpinner from "../../components/common/LoadingSpinner";
-import Button from "../../components/common/Button";
-import { getListing } from "../../api/listings";
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { getCategories } from "../../api/categories";
-import { useAuth } from "../../hooks/useAuth";
-import { formatCurrency } from "../../utils/formatters";
-import { mockListings } from "../../data/mockData";
+import { createInquiry } from "../../api/inquiries";
+import { getListing } from "../../api/listings";
+import Button from "../../components/common/Button";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
 import ListingCard from "../../components/marketplace/ListingCard";
 import ImageGallery from "../../components/media/ImageGallery";
+import { mockListings } from "../../data/mockData";
+import { useAuth } from "../../hooks/useAuth";
+import { formatCurrency } from "../../utils/formatters";
 
 export default function BusinessDetails() {
   const { id } = useParams();
@@ -20,7 +21,9 @@ export default function BusinessDetails() {
   const [error, setError] = useState("");
   const [inquirySent, setInquirySent] = useState(false);
   const [sendingInquiry, setSendingInquiry] = useState(false);
+  const [inquiryError, setInquiryError] = useState("");
   const [inquiryForm, setInquiryForm] = useState({ message: "" });
+  const [sentInquiryId, setSentInquiryId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,15 +65,20 @@ export default function BusinessDetails() {
     }
     if (sendingInquiry) return;
     setSendingInquiry(true);
+    setInquiryError("");
     try {
-      await fetch("/api/inquiries/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listing: listing.id, message: inquiryForm.message }),
+      const result = await createInquiry({
+        listing: listing.id,
+        message: inquiryForm.message.trim(),
       });
+      setSentInquiryId(result.id);
       setInquirySent(true);
-    } catch {
-      setInquirySent(true);
+    } catch (err) {
+      setInquiryError(
+        err?.response?.data?.detail ||
+        err?.response?.data?.message?.[0] ||
+        "Couldn't send your message. Please try again."
+      );
     } finally {
       setSendingInquiry(false);
     }
@@ -167,7 +175,15 @@ export default function BusinessDetails() {
           {!isOwnListing && (
             <div className="rounded-xl border border-border bg-surface p-4">
               {inquirySent ? (
-                <p className="text-sm text-success">Message sent! The seller will get back to you.</p>
+                <div className="space-y-2">
+                  <p className="text-sm text-success">Message sent! The seller will get back to you.</p>
+                  <Link
+                    to={`/messages?inquiry=${sentInquiryId}`}
+                    className="text-sm font-medium text-brand-600 hover:underline"
+                  >
+                    View conversation
+                  </Link>
+                </div>
               ) : (
                 <form onSubmit={handleInquiry} className="flex flex-col gap-3">
                   <label className="text-sm font-medium text-ink">Message the seller</label>
@@ -179,6 +195,7 @@ export default function BusinessDetails() {
                     required
                     className="rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-soft focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400"
                   />
+                  {inquiryError && <p className="text-sm text-danger">{inquiryError}</p>}
                   <Button type="submit" disabled={sendingInquiry || !inquiryForm.message.trim()}>
                     {sendingInquiry ? "Sending…" : "Send message"}
                   </Button>

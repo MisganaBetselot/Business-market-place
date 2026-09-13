@@ -9,6 +9,7 @@ class Notification(models.Model):
         MEDIA_APPROVED = "MEDIA_APPROVED", "Media Approved"
         MEDIA_REJECTED = "MEDIA_REJECTED", "Media Rejected"
         NEW_INQUIRY = "NEW_INQUIRY", "New Inquiry"
+        NEW_MESSAGE = "NEW_MESSAGE", "New Message"
         SUBSCRIPTION_EXPIRING = (
             "SUBSCRIPTION_EXPIRING",
             "Subscription Expiring",
