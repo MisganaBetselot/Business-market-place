@@ -35,7 +35,7 @@ class BusinessListing(models.Model):
     phone = models.CharField(max_length=20, null=True, blank=True)
     whatsapp = models.CharField(max_length=20, null=True, blank=True)
     contact_email = models.EmailField(null=True, blank=True)
-
+    website = models.URLField(max_length=255, null=True, blank=True)
     status = models.CharField(
         max_length=20,
         choices=Status.choices,

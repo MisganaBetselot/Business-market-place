@@ -288,6 +288,7 @@ function ListingsSection({ onNavigate }) {
     phone: "",
     whatsapp: "",
     contact_email: "",
+    website: "",
     status: "DRAFT",
   });
   const [saving, setSaving] = useState(false);
@@ -367,6 +368,7 @@ function ListingsSection({ onNavigate }) {
       phone: "",
       whatsapp: "",
       contact_email: "",
+      website: "",
       status: "DRAFT",
     });
     setShowForm(false);
@@ -388,6 +390,7 @@ function ListingsSection({ onNavigate }) {
       phone: "",
       whatsapp: "",
       contact_email: "",
+      website: "",
       status: "DRAFT",
     });
     setShowForm(true);
@@ -408,6 +411,7 @@ function ListingsSection({ onNavigate }) {
       phone: listing.phone || "",
       whatsapp: listing.whatsapp || "",
       contact_email: listing.contact_email || "",
+      website: listing.website || "",
       status: listing.status || "DRAFT",
     });
     setShowForm(true);
@@ -431,6 +435,7 @@ function ListingsSection({ onNavigate }) {
         phone: form.phone || undefined,
         whatsapp: form.whatsapp || undefined,
         contact_email: form.contact_email || undefined,
+        website: form.website || undefined,
         status: form.status,
       };
       if (editingId) {
@@ -545,6 +550,14 @@ function ListingsSection({ onNavigate }) {
               name="contact_email"
               value={form.contact_email}
               onChange={(e) => setForm((f) => ({ ...f, contact_email: e.target.value }))}
+            />
+            <Input
+              label="Website"
+              type="url"
+              name="website"
+              placeholder="https://example.com"
+              value={form.website}
+              onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))}
             />
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-brand-600">Category *</label>
@@ -2003,7 +2016,8 @@ export default function SellerDashboard() {
             {sidebarOpen && (
               <div className="absolute inset-0 bg-ink/40 md:hidden" onClick={() => setSidebarOpen(false)} />
             )}
-            <div className={`relative md:relative  shrink-0 rounded-xl border border-border bg-surface p-4 ${sidebarOpen ? "absolute left-4 top-4 md:static" : ""}`}>
+            <div className={`relative md:relative 
+               shrink-0 rounded-xl border border-border bg-surface p-4 ${sidebarOpen ? "absolute left-4 top-4 md:static" : ""}`}>
               <div className="hidden md:block mb-4">
                 <h2 className="font-display text-lg font-semibold text-ink">Seller Dashboard</h2>
                 <p className="text-xs text-ink-soft">{user?.first_name || "Seller"}</p>

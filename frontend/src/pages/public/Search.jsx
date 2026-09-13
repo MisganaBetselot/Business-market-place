@@ -1,12 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import LoadingSpinner from "../../components/common/LoadingSpinner";
-import SearchBar from "../../components/marketplace/SearchBar";
-import ListingGrid from "../../components/marketplace/ListingGrid";
-import { getListings } from "../../api/listings";
 import { getCategories } from "../../api/categories";
-import { mockListings, mockCategories as staticCategories } from "../../data/mockData";
+import { getListings } from "../../api/listings";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
 import FilterPanel from "../../components/marketplace/FilterPanel";
+import ListingGrid from "../../components/marketplace/ListingGrid";
+import SearchBar from "../../components/marketplace/SearchBar";
+import { mockCategories as staticCategories } from "../../data/mockData";
 
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,16 +35,16 @@ export default function Search() {
           getCategories(),
         ]);
         if (!cancelled) {
-          const data = listingsRes?.length ? listingsRes : mockListings;
-          const cats = categoriesRes?.length ? categoriesRes : staticCategories;
-          setListings(data);
-          setCategories(cats);
-        }
+  setListings(listingsRes ?? []);
+  setCategories(categoriesRes?.length ? categoriesRes : staticCategories);
+}
       } catch {
-        if (!cancelled) {
-          setListings(mockListings);
-          setCategories(staticCategories);
-        }
+  if (!cancelled) {
+    setError("Couldn't load listings.");
+    setListings([]);
+    setCategories(staticCategories);
+  }
+
       } finally {
         if (!cancelled) setLoading(false);
       }

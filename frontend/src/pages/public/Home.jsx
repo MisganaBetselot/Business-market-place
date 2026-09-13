@@ -1,11 +1,12 @@
+import { ArrowRight, BadgeCheck, Compass, FileText, Handshake, Search, SlidersHorizontal, TrendingUp } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Compass, Handshake, FileText, TrendingUp, ArrowRight, BadgeCheck, Search, SlidersHorizontal } from "lucide-react";
-import Button from "../../components/common/Button";
+import { getListings } from "../../api/listings";
+import SubscriptionPlans from "../../components/home/SubscriptionPlans";
+import PhotoSlideshow from "../../components/layout/PhotoSlideshow";
 import CategoryCard from "../../components/marketplace/CategoryCard";
 import ListingCard from "../../components/marketplace/ListingCard";
-import PhotoSlideshow from "../../components/layout/PhotoSlideshow";
-import { mockCategories, mockListings } from "../../data/mockData";
-import SubscriptionPlans from "../../components/home/SubscriptionPlans";
+import { mockCategories } from "../../data/mockData";
 
 const heroPhotos = [
   "https://images.unsplash.com/photo-1575663620136-5ebbfcc2c597?auto=format&fit=crop&w=1600&q=80",
@@ -37,7 +38,23 @@ const aboutPoints = [
 ];
 
 export default function Home() {
-  const featured = mockListings.slice(0, 4);
+  const [featured, setFeatured] = useState([]);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    getListings()
+      .then((data) => {
+        if (!cancelled) setFeatured(data.slice(0, 4));
+      })
+      .catch(() => {
+        if (!cancelled) setFeatured([]);
+      })
+      .finally(() => {
+        if (!cancelled) setFeaturedLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div className="min-h-screen bg-white">
@@ -139,9 +156,19 @@ export default function Home() {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-3 lg:grid-cols-3">
-            {featured.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
-            ))}
+            {featuredLoading ? (
+              [...Array(3)].map((_, i) => (
+                <div key={i} className="h-64 animate-pulse rounded-2xl bg-surface-sunken" />
+              ))
+            ) : featured.length === 0 ? (
+              <p className="col-span-full py-8 text-center text-sm text-ink-soft">
+                No listings yet — check back soon.
+              </p>
+            ) : (
+              featured.map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))
+            )}
           </div>
 
           <div className="flex flex-col gap-4 lg:sticky lg:top-24 lg:self-start">

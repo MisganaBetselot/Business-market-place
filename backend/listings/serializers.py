@@ -55,6 +55,7 @@ class BusinessListingSerializer(serializers.ModelSerializer):
             "phone",
             "whatsapp",
             "contact_email",
+            "website",
             "status",
             "views",
             "created_at",
@@ -65,7 +66,6 @@ class BusinessListingSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "seller",
-            "status",
             "created_at",
             "updated_at",
         ]
