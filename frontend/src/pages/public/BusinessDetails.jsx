@@ -1,4 +1,4 @@
-import { Phone } from "lucide-react";
+import { Globe, Phone } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getCategories } from "../../api/categories";
@@ -99,7 +99,7 @@ export default function BusinessDetails() {
     );
   }
 
-  const isOwnListing = user?.id === listing.seller;
+const isOwnListing = String(user?.id) === String(listing.seller);
 
   const images = (listing.images || []).map((img, idx) => ({
     id: img.id || idx,
@@ -150,7 +150,7 @@ export default function BusinessDetails() {
           <div className="rounded-xl border border-border bg-surface p-4">
             <h3 className="text-sm font-medium text-ink">Seller Information</h3>
             <div className="mt-2 flex flex-col gap-1 text-sm text-ink-soft">
-              <span>{listing.seller || listing.sellerName || "Private Seller"}</span>
+              <span>{listing.seller_name || "Private Seller"}</span>
               <span>{locationText}</span>
               {listing.phone && (
                 <a

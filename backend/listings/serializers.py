@@ -29,6 +29,7 @@ class BusinessListingSerializer(serializers.ModelSerializer):
         source="seller.email",
         read_only=True,
     )
+    seller_name = serializers.SerializerMethodField()
 
     category_name = serializers.CharField(
         source="category.name",
@@ -37,12 +38,18 @@ class BusinessListingSerializer(serializers.ModelSerializer):
 
     images = serializers.SerializerMethodField()
 
+    def get_seller_name(self, obj):
+        first = (obj.seller.first_name or "").strip()
+        last = (obj.seller.last_name or "").strip()
+        full = f"{first} {last}".strip()
+        return full or obj.seller.email
     class Meta:
         model = BusinessListing
         fields = [
             "id",
             "seller",
             "seller_email",
+            "seller_name",
             "category",
             "category_name",
             "business_name",

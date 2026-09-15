@@ -64,11 +64,7 @@ export async function createListing(payload) {
 export async function getSavedListings() {
   const { data } = await client.get("/listings/saved/");
 
-  const list = Array.isArray(data)
-    ? data
-    : data.results ?? [];
-
-  return list.map(normalizeListing);
+  return Array.isArray(data) ? data : data.results ?? [];
 }
 
 /**
@@ -91,27 +87,6 @@ export async function unsaveListing(listingId) {
   );
 
   return data;
-}
-
-/**
- * Normalize listing data for the Favorites page.
- */
-function normalizeListing(raw) {
-  return {
-    id: raw.id,
-    name: raw.business_name || raw.name,
-    category: raw.category,
-    location: raw.location,
-    askingPrice:
-      raw.asking_price_display ||
-      raw.asking_price ||
-      null,
-    coverImageUrl:
-      raw.cover_image_url ||
-      raw.image ||
-      null,
-    badge: raw.badge || null,
-  };
 }
 
 export default client;

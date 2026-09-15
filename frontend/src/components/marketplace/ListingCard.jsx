@@ -1,10 +1,10 @@
+import { ArrowRight, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
-import { MapPin, ArrowRight } from "lucide-react";
 import { Card } from "../common/Card";
 import FavoriteButton from "../favorite/FavoriteButton";
 import ImageGallery from "../media/ImageGallery";
 
-export default function ListingCard({ listing }) {
+export default function ListingCard({ listing,saved}) {
   const price =
     listing.asking_price != null
       ? new Intl.NumberFormat(undefined, {
@@ -15,7 +15,7 @@ export default function ListingCard({ listing }) {
       : null;
 
   const location = [listing.city, listing.region].filter(Boolean).join(", ") || "Location TBD";
-  const sellerLabel = listing.seller || listing.sellerName;
+  const sellerLabel = listing.seller_name;
 
   const images = (listing.images || []).map((img, idx) => ({
     id: img.id || idx,
@@ -36,7 +36,7 @@ export default function ListingCard({ listing }) {
             variant="compact"
           />
           <div className="absolute right-3 top-3 z-20">
-            <FavoriteButton listing={listing} size="sm" />
+            <FavoriteButton listing={listing} saved={saved} size="sm" />
           </div>
         </div>
 

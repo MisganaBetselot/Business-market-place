@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { getCategories } from "../../api/categories";
 import api from "../../api/client";
 import Button from "../../components/common/Button";
@@ -8,21 +8,11 @@ import Input from "../../components/common/Input";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { useAuth } from "../../hooks/useAuth";
 
-const TABS = [
-  { id: "overview", label: "Overview", icon: "📊" },
-  { id: "listings", label: "My Listings", icon: "📦" },
-  { id: "add", label: "Add Listing", icon: "➕" },
-  { id: "subscription", label: "Subscription", icon: "💳" },
-  { id: "media", label: "Media", icon: "🖼️" },
-  { id: "messages", label: "Messages", icon: "💬" },
-  { id: "notifications", label: "Notifications", icon: "🔔" },
-];
+
 
 const NAV_ITEMS = [
   { path: "overview", label: "Overview", icon: "📊" },
   { path: "listings", label: "My Listings", icon: "📦" },
-  { path: "add", label: "Add Listing", icon: "➕" },
-  { path: "subscription", label: "Subscription", icon: "💳" },
   { path: "media", label: "Media", icon: "🖼️" },
   { path: "messages", label: "Messages", icon: "💬" },
   { path: "notifications", label: "Notifications", icon: "🔔" },
@@ -1725,7 +1715,9 @@ function MessagesSection() {
       setLoading(false);
     }
   }
-
+    useEffect(() => {
+    loadInquiries();
+  }, []);
   async function handleMarkRead(inquiryId) {
     setMarkingReadId(inquiryId);
     try {
@@ -1858,6 +1850,9 @@ function NotificationsSection() {
       setLoading(false);
     }
   }
+    useEffect(() => {
+    loadNotifications();
+  }, []);
 
   async function handleMarkRead(notificationId) {
     setMarkingReadId(notificationId);
@@ -1988,15 +1983,22 @@ function NotificationsSection() {
 
 export default function SellerDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
-
-  useEffect(() => {
-    if (activeTab === "add") {
-      startCreate();
+    async function goToMedia() {
+    try {
+      const { data } = await api.get("/listings/", { params: { mine: "true" } });
+      const arr = Array.isArray(data) ? data : data.results ?? [];
+      if (arr.length === 0) {
+        navigate("/sell/plans");
+        return;
+      }
+      navigate(`/sell/listings/${arr[0].id}/media`);
+    } catch {
+      navigate("/sell/subscription-status");
     }
-  }, [activeTab]);
-
+  }
   return (
     <div className="min-h-screen bg-surface-muted">
       <div className="mx-auto max-w-6xl px-4 py-6">
@@ -2022,15 +2024,21 @@ export default function SellerDashboard() {
                 <h2 className="font-display text-lg font-semibold text-ink">Seller Dashboard</h2>
                 <p className="text-xs text-ink-soft">{user?.first_name || "Seller"}</p>
               </div>
-              <nav className="flex flex-col gap-1">
+                         <nav className="flex flex-col gap-1">
                 {NAV_ITEMS.map((item) => (
                   <button
                     key={item.path}
                     type="button"
                     onClick={() => {
-                      setActiveTab(item.path);
-                      setSidebarOpen(false);
-                    }}
+  if (item.path === "media") {
+    goToMedia();
+  } else if (item.to) {
+    navigate(item.to);
+  } else {
+    setActiveTab(item.path);
+  }
+  setSidebarOpen(false);
+}}
                     className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                       activeTab === item.path
                         ? "bg-brand-50 text-brand-600"
@@ -2055,10 +2063,10 @@ export default function SellerDashboard() {
                     Welcome back, {user?.first_name || "seller"}. Here is how your listings are doing.
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-3">
+                                <div className="flex shrink-0 items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => setActiveTab("subscription")}
+                    onClick={() => navigate("/sell/subscription-status")}
                     className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink hover:bg-surface-sunken"
                   >
                     <span aria-hidden="true">📋</span>
@@ -2066,7 +2074,7 @@ export default function SellerDashboard() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setActiveTab("add")}
+                    onClick={() => navigate("/sell/plans")}
                     className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
                   >
                     <span aria-hidden="true">+</span>
@@ -2100,11 +2108,7 @@ export default function SellerDashboard() {
             {activeTab === "listings" && (
               <ListingsSection onNavigate={setActiveTab} />
             )}
-
-            {activeTab === "add" && (
-              <ListingsSection onNavigate={setActiveTab} />
-            )}
-
+      
             {activeTab === "subscription" && (
               <SubscriptionSection />
             )}
