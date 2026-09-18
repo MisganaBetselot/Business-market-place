@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getCategories } from "../../api/categories";
 import api from "../../api/client";
+import { getMySubscriptions } from "../../api/sellerSubscriptions";
 import Button from "../../components/common/Button";
 import Input from "../../components/common/Input";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
@@ -31,6 +32,13 @@ const SUB_STATUS_BADGE = {
   EXPIRED: { label: "Expired", className: "bg-surface-sunken text-ink-soft" },
   REJECTED: { label: "Rejected", className: "bg-danger/10 text-danger" },
   CANCELLED: { label: "Cancelled", className: "bg-surface-sunken text-ink-soft" },
+};
+
+// Matches Media.Status choices in backend/media/models.py.
+const MEDIA_STATUS_BADGE = {
+  PENDING_REVIEW: { label: "Pending Review", className: "bg-gold-100 text-gold-500" },
+  APPROVED: { label: "Approved", className: "bg-brand-50 text-brand-600" },
+  REJECTED: { label: "Rejected", className: "bg-danger/10 text-danger" },
 };
 
 const LISTING_STATUSES = ["DRAFT", "ACTIVE", "SOLD", "SUSPENDED"];
@@ -1977,13 +1985,40 @@ export default function SellerDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
     async function goToMedia() {
     try {
-      const { data } = await api.get("/listings/", { params: { mine: "true" } });
-      const arr = Array.isArray(data) ? data : data.results ?? [];
+      const [{ data: listingsData }, subscriptions] = await Promise.all([
+        api.get("/listings/", { params: { mine: "true" } }),
+        getMySubscriptions(),
+      ]);
+      const arr = Array.isArray(listingsData) ? listingsData : listingsData.results ?? [];
       if (arr.length === 0) {
         navigate("/sell/plans");
         return;
       }
-      navigate(`/sell/listings/${arr[0].id}/media`);
+      // Media can only actually be submitted once a listing's subscription
+      // has been approved (status ACTIVE) - a pending/rejected receipt
+      // means there's no subscription id to attach media to yet, which
+      // previously surfaced as a confusing "Incorrect type. Expected pk
+      // value, received str." error from the backend instead of telling
+      // the seller their receipt is still pending.
+      //
+      // The API returns listings newest-first (-created_at), so arr[0] is
+      // the seller's most recent listing - the one they're actually
+      // trying to work with right now. Check THAT one specifically rather
+      // than searching for any listing with an active subscription: the
+      // earlier version used .find() across all listings, which meant a
+      // brand-new pending listing got silently skipped in favour of an
+      // older, already-approved one, sending the seller to the wrong
+      // listing's media page instead of telling them their new receipt
+      // is still pending.
+      const mostRecentListing = arr[0];
+      const isReady = subscriptions.some(
+        (s) => String(s.listing?.id) === String(mostRecentListing.id) && s.status === "ACTIVE"
+      );
+      if (!isReady) {
+        navigate("/sell/subscription-status");
+        return;
+      }
+      navigate(`/sell/listings/${mostRecentListing.id}/media`);
     } catch {
       navigate("/sell/subscription-status");
     }

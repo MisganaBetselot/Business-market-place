@@ -1,22 +1,22 @@
-import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Camera,
-  Calendar,
-  Link2,
-  UploadCloud,
-  Trash2,
-  Info,
   ArrowLeft,
-  Clock3,
+  Calendar,
+  Camera,
   CheckCircle2,
+  Clock3,
   FileWarning,
+  Info,
+  Link2,
   Pencil,
+  Trash2,
+  UploadCloud,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { getMySubscriptions } from "../../api/sellerSubscriptions";
 
-import { getMedia, uploadMedia, deleteMedia } from "../../api/media";
+import { deleteMedia, getMedia, uploadMedia } from "../../api/media";
 
 const STEPS = ["Business Details", "Payment", "Review", "Media", "Published"];
 
@@ -118,7 +118,7 @@ export default function MediaUpload() {
   const [justSubmittedPhotos, setJustSubmittedPhotos] = useState(false);
   const fileInputRef = useRef(null);
 
-  const { data: subscriptionsData } = useQuery({
+  const { data: subscriptionsData, isFetched: subscriptionsFetched } = useQuery({
     queryKey: ["mySubscriptions"],
     queryFn: getMySubscriptions,
     retry: false,
@@ -130,6 +130,19 @@ export default function MediaUpload() {
   const activeSubscription = subscriptions.find(
     (s) => String(s.listing?.id) === String(listingId) && s.status === "ACTIVE"
   );
+
+  // Guards every way this page can be reached (direct URL, a stale
+  // bookmark, back-button, etc.), not just the dashboard's own "Media"
+  // button — without an ACTIVE subscription there's no subscription id
+  // to attach media to, and submitting used to fail with a confusing
+  // "Incorrect type. Expected pk value, received str." error instead of
+  // telling the seller their receipt is still pending.
+  useEffect(() => {
+    if (subscriptionsFetched && listingId && !activeSubscription) {
+      navigate("/sell/subscription-status", { replace: true });
+    }
+  }, [subscriptionsFetched, listingId, activeSubscription, navigate]);
+
   const listing = location.state?.listing;
   const selectedPlan = activeSubscription
     ? {
