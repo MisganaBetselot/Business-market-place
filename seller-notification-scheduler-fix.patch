@@ -1,0 +1,277 @@
+diff --git a/backend/requirements.txt b/backend/requirements.txt
+index 042b700..ba46322 100644
+--- a/backend/requirements.txt
++++ b/backend/requirements.txt
+@@ -1,3 +1,4 @@
++apscheduler==3.11.3
+ asgiref==3.12.1
+ Django==6.1
+ django-cors-headers==4.9.0
+diff --git a/backend/seller_subscriptions/apps.py b/backend/seller_subscriptions/apps.py
+index 273ba69..4c8f55c 100644
+--- a/backend/seller_subscriptions/apps.py
++++ b/backend/seller_subscriptions/apps.py
+@@ -1,5 +1,27 @@
++import os
++import sys
++
+ from django.apps import AppConfig
+ 
+ 
+ class SellerSubscriptionsConfig(AppConfig):
+     name = 'seller_subscriptions'
++
++    def ready(self):
++        # Avoid starting the scheduler for management commands that don't
++        # run the server (migrate, makemigrations, test, shell, etc.), and
++        # avoid a second scheduler in the reloader's parent process when
++        # running `runserver` with the auto-reloader (RUN_MAIN is only set
++        # in the actual worker process).
++        command = sys.argv[1] if len(sys.argv) > 1 else ""
++        is_server_command = command in ("runserver", "gunicorn", "uvicorn")
++        reloader_parent = (
++            command == "runserver" and os.environ.get("RUN_MAIN") != "true"
++        )
++
++        if not is_server_command or reloader_parent:
++            return
++
++        from . import scheduler
++
++        scheduler.start()
+diff --git a/backend/seller_subscriptions/management/commands/process_subscriptions.py b/backend/seller_subscriptions/management/commands/process_subscriptions.py
+index 4b6a0c3..21a948e 100644
+--- a/backend/seller_subscriptions/management/commands/process_subscriptions.py
++++ b/backend/seller_subscriptions/management/commands/process_subscriptions.py
+@@ -1,71 +1,13 @@
+ from django.core.management.base import BaseCommand
+-from django.utils import timezone
+ 
+-from seller_subscriptions.models import SellerSubscription
+-from notifications.models import Notification
++from seller_subscriptions.services import process_subscription_expirations
+ 
+ 
+ class Command(BaseCommand):
+     help = "Process expiring and expired seller subscriptions."
+ 
+     def handle(self, *args, **options):
+-        now = timezone.now()
+-
+-        # Mark active subscriptions as expired
+-        expired_subscriptions = SellerSubscription.objects.filter(
+-            status=SellerSubscription.Status.ACTIVE,
+-            expiry_date__isnull=False,
+-            expiry_date__lte=now,
+-        )
+-
+-        expired_count = 0
+-
+-        for subscription in expired_subscriptions:
+-            subscription.status = SellerSubscription.Status.EXPIRED
+-            subscription.save(update_fields=["status", "updated_at"])
+-
+-            Notification.objects.create(
+-                user=subscription.user,
+-                type=Notification.NotificationType.SUBSCRIPTION_EXPIRED,
+-                message=(
+-                    f"Your {subscription.plan.name} subscription has expired."
+-                ),
+-            )
+-
+-            expired_count += 1
+-
+-        # Notify sellers whose subscriptions will expire soon.
+-        # Currently this checks subscriptions expiring within 3 days.
+-        expiring_limit = now + timezone.timedelta(days=3)
+-
+-        expiring_subscriptions = SellerSubscription.objects.filter(
+-            status=SellerSubscription.Status.ACTIVE,
+-            expiry_date__gt=now,
+-            expiry_date__lte=expiring_limit,
+-        )
+-
+-        expiring_count = 0
+-
+-        for subscription in expiring_subscriptions:
+-            already_notified = Notification.objects.filter(
+-                user=subscription.user,
+-                type=Notification.NotificationType.SUBSCRIPTION_EXPIRING,
+-                message__icontains=subscription.plan.name,
+-                created_at__date=now.date(),
+-            ).exists()
+-
+-            if not already_notified:
+-                Notification.objects.create(
+-                    user=subscription.user,
+-                    type=Notification.NotificationType.SUBSCRIPTION_EXPIRING,
+-                    message=(
+-                        f"Your {subscription.plan.name} subscription "
+-                        f"will expire on "
+-                        f"{subscription.expiry_date.strftime('%Y-%m-%d')}."
+-                    ),
+-                )
+-
+-                expiring_count += 1
++        expired_count, expiring_count = process_subscription_expirations()
+ 
+         self.stdout.write(
+             self.style.SUCCESS(
+@@ -73,4 +15,4 @@ class Command(BaseCommand):
+                 f"Expired: {expired_count}, "
+                 f"Expiring notifications: {expiring_count}"
+             )
+-        )
+\ No newline at end of file
++        )
+diff --git a/backend/seller_subscriptions/scheduler.py b/backend/seller_subscriptions/scheduler.py
+new file mode 100644
+index 0000000..40c8191
+--- /dev/null
++++ b/backend/seller_subscriptions/scheduler.py
+@@ -0,0 +1,61 @@
++import logging
++
++from apscheduler.schedulers.background import BackgroundScheduler
++
++logger = logging.getLogger(__name__)
++
++_scheduler = None
++
++
++def _run_job():
++    # Imported here (not at module load time) so Django's app registry is
++    # fully populated before any models are touched.
++    from .services import process_subscription_expirations
++
++    try:
++        expired_count, expiring_count = process_subscription_expirations()
++        logger.info(
++            "process_subscription_expirations: expired=%s expiring=%s",
++            expired_count,
++            expiring_count,
++        )
++    except Exception:
++        # A scheduled job must never crash the background thread it runs
++        # on - log it and let the next scheduled run try again.
++        logger.exception("process_subscription_expirations failed")
++
++
++def start():
++    """
++    Start the background job that expires subscriptions and sends
++    expiring/expired notifications to sellers.
++
++    Runs once shortly after startup and then every hour. Safe to call more
++    than once - only starts a single scheduler per process.
++    """
++    global _scheduler
++
++    if _scheduler is not None:
++        return
++
++    _scheduler = BackgroundScheduler(daemon=True)
++    _scheduler.add_job(
++        _run_job,
++        trigger="interval",
++        hours=1,
++        next_run_time=None,  # first run is scheduled explicitly below
++        id="process_subscription_expirations",
++        replace_existing=True,
++        max_instances=1,
++        coalesce=True,
++    )
++    # Run once right away (in a few seconds) so expired/expiring
++    # notifications don't wait a full hour after a fresh server start.
++    import datetime
++
++    _scheduler.modify_job(
++        "process_subscription_expirations",
++        next_run_time=datetime.datetime.now() + datetime.timedelta(seconds=10),
++    )
++    _scheduler.start()
++    logger.info("Seller subscription expiry scheduler started.")
+diff --git a/backend/seller_subscriptions/services.py b/backend/seller_subscriptions/services.py
+new file mode 100644
+index 0000000..f4bd863
+--- /dev/null
++++ b/backend/seller_subscriptions/services.py
+@@ -0,0 +1,78 @@
++from django.utils import timezone
++
++from notifications.models import Notification
++
++from .models import SellerSubscription
++
++
++def process_subscription_expirations():
++    """
++    Mark active subscriptions as EXPIRED once their expiry_date has passed,
++    and notify sellers whose subscriptions are expiring within the next 3
++    days.
++
++    This is the single source of truth for both the ``process_subscriptions``
++    management command and the background scheduler (see ``scheduler.py``),
++    so the two never drift apart.
++
++    Returns a tuple of (expired_count, expiring_count).
++    """
++    now = timezone.now()
++
++    # --- Mark active subscriptions as expired -----------------------------
++    expired_subscriptions = SellerSubscription.objects.filter(
++        status=SellerSubscription.Status.ACTIVE,
++        expiry_date__isnull=False,
++        expiry_date__lte=now,
++    )
++
++    expired_count = 0
++
++    for subscription in expired_subscriptions:
++        subscription.status = SellerSubscription.Status.EXPIRED
++        subscription.save(update_fields=["status", "updated_at"])
++
++        Notification.objects.create(
++            user=subscription.user,
++            type=Notification.NotificationType.SUBSCRIPTION_EXPIRED,
++            message=(
++                f"Your {subscription.plan.name} subscription has expired."
++            ),
++        )
++
++        expired_count += 1
++
++    # --- Notify sellers whose subscriptions will expire soon --------------
++    # Currently this checks subscriptions expiring within 3 days.
++    expiring_limit = now + timezone.timedelta(days=3)
++
++    expiring_subscriptions = SellerSubscription.objects.filter(
++        status=SellerSubscription.Status.ACTIVE,
++        expiry_date__gt=now,
++        expiry_date__lte=expiring_limit,
++    )
++
++    expiring_count = 0
++
++    for subscription in expiring_subscriptions:
++        already_notified = Notification.objects.filter(
++            user=subscription.user,
++            type=Notification.NotificationType.SUBSCRIPTION_EXPIRING,
++            message__icontains=subscription.plan.name,
++            created_at__date=now.date(),
++        ).exists()
++
++        if not already_notified:
++            Notification.objects.create(
++                user=subscription.user,
++                type=Notification.NotificationType.SUBSCRIPTION_EXPIRING,
++                message=(
++                    f"Your {subscription.plan.name} subscription "
++                    f"will expire on "
++                    f"{subscription.expiry_date.strftime('%Y-%m-%d')}."
++                ),
++            )
++
++            expiring_count += 1
++
++    return expired_count, expiring_count
