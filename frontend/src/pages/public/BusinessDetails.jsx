@@ -1,4 +1,4 @@
-import { Globe, Phone } from "lucide-react";
+import { Globe, Phone, PlayCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getCategories } from "../../api/categories";
@@ -125,6 +125,17 @@ const isOwnListing = String(user?.id) === String(listing.seller);
             alt={listing.business_name || listing.title}
             variant="full"
           />
+          {listing.video_url && (
+            <a
+              href={listing.video_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 flex w-fit items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline"
+            >
+              <PlayCircle className="h-4 w-4" strokeWidth={1.75} />
+              Watch video
+            </a>
+          )}
         </div>
 
         {/* Right - Details */}

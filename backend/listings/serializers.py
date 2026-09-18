@@ -37,6 +37,7 @@ class BusinessListingSerializer(serializers.ModelSerializer):
     )
 
     images = serializers.SerializerMethodField()
+    video_url = serializers.SerializerMethodField()
 
     def get_seller_name(self, obj):
         first = (obj.seller.first_name or "").strip()
@@ -67,6 +68,7 @@ class BusinessListingSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "images",
+            "video_url",
         ]
 
         read_only_fields = [
@@ -83,3 +85,26 @@ class BusinessListingSerializer(serializers.ModelSerializer):
             media_type="PHOTO"
         ).order_by("created_at")
         return MediaSerializer(approved_media, many=True, context=self.context).data
+
+    def get_video_url(self, obj):
+        """Return the most recent approved video for public listing, if any.
+
+        Video is submitted as a link (video_url), not an uploaded file —
+        confirmed against the seller media-upload flow, which always sends
+        VIDEO items with video_url set and no file. get_images() above
+        deliberately excludes VIDEO items, so this is the only place a
+        listing's video is exposed to the public detail page.
+        """
+        video = obj.media.filter(
+            status="APPROVED",
+            media_type="VIDEO",
+        ).order_by("-created_at").first()
+
+        if not video:
+            return None
+
+        if video.file_path:
+            request = self.context.get("request")
+            return request.build_absolute_uri(video.file_path.url) if request else video.file_path.url
+
+        return video.video_url

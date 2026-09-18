@@ -170,6 +170,7 @@ function OverviewListingRow({ listing }) {
 }
 
 function OverviewSection({ onNavigate }) {
+  const navigate = useNavigate();
   const { user } = useAuth();
 
   const { data, isLoading } = useQuery({
@@ -244,7 +245,7 @@ function OverviewSection({ onNavigate }) {
           </div>
         ) : recentListings.length === 0 ? (
           emptyState("No listings yet", "Create your first listing to get started.", (
-            <Button size="sm" className="mt-4" onClick={() => onNavigate("add")}>Add Listing</Button>
+            <Button size="sm" className="mt-4" onClick={() => navigate("/sell/plans")}>Add Listing</Button>
           ))
         ) : (
           <div>
@@ -263,6 +264,7 @@ function OverviewSection({ onNavigate }) {
 /* ------------------------------------------------------------------ */
 
 function ListingsSection({ onNavigate }) {
+  const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
@@ -367,24 +369,11 @@ function ListingsSection({ onNavigate }) {
   }
 
   function startCreate() {
-    setEditingId(null);
-    setForm({
-      business_name: "",
-      description: "",
-      asking_price: "",
-      category: "",
-      region: "",
-      city: "",
-      area: "",
-      address: "",
-      phone: "",
-      whatsapp: "",
-      contact_email: "",
-      website: "",
-      status: "DRAFT",
-    });
-    setShowForm(true);
-    setFormError("");
+    // A new listing always needs an active subscription/plan tied to it
+    // (confirmed in BusinessInformation.jsx / SubscriptionStatus.jsx) -
+    // route through plan selection instead of opening this inline form,
+    // which had no way to attach a plan and would 400 on submit.
+    navigate("/sell/plans");
   }
 
   function startEdit(listing) {

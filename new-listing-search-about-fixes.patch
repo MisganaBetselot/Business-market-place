@@ -1,0 +1,210 @@
+diff --git a/frontend/src/components/layout/Navbar.jsx b/frontend/src/components/layout/Navbar.jsx
+index 33d8f6c..6267141 100644
+--- a/frontend/src/components/layout/Navbar.jsx
++++ b/frontend/src/components/layout/Navbar.jsx
+@@ -27,6 +27,29 @@ export default function Navbar() {
+     });
+   };
+ 
++  const scrollToAbout = () => {
++    setMobileMenuOpen(false);
++    document.getElementById("about")?.scrollIntoView({
++      behavior: "smooth",
++      block: "start",
++    });
++  };
++
++  const handleAboutClick = () => {
++    setMobileMenuOpen(false);
++
++    if (isHome) {
++      // Already on the landing page — the About section is right there,
++      // just scroll to it.
++      scrollToAbout();
++    } else {
++      // No separate /about page exists — About is only ever content on
++      // the landing page, so go there and land on that section. Home.jsx
++      // watches for this hash on mount and scrolls to it.
++      navigate("/#about");
++    }
++  };
++
+   const handlePricingClick = () => {
+     setMobileMenuOpen(false);
+ 
+@@ -186,12 +209,13 @@ export default function Navbar() {
+               Browse
+             </Link>
+ 
+-            <Link
+-              to="/about"
++            <button
++              type="button"
++              onClick={handleAboutClick}
+               className={`text-sm font-medium transition-colors hover:underline hover:underline-offset-4 ${linkColor}`}
+             >
+               About Us
+-            </Link>
++            </button>
+ 
+             {/* Pricing */}
+             <button
+@@ -386,17 +410,17 @@ export default function Navbar() {
+             </Link>
+ 
+             {/* About Us */}
+-            <Link
+-              to="/about"
+-              onClick={closeMobileMenu}
+-              className={`flex items-center rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:underline hover:underline-offset-4 ${
++            <button
++              type="button"
++              onClick={handleAboutClick}
++              className={`flex w-full items-center rounded-lg px-3 py-3 text-left text-sm font-medium transition-colors hover:underline hover:underline-offset-4 ${
+                 isHome
+                   ? "text-white/90 hover:bg-white/10 hover:text-white"
+                   : "text-ink-soft hover:bg-gray-50 hover:text-ink"
+               }`}
+             >
+               About Us
+-            </Link>
++            </button>
+ 
+             {/* Pricing */}
+             <button
+diff --git a/frontend/src/pages/public/Home.jsx b/frontend/src/pages/public/Home.jsx
+index 9716c50..2c3c8af 100644
+--- a/frontend/src/pages/public/Home.jsx
++++ b/frontend/src/pages/public/Home.jsx
+@@ -1,6 +1,6 @@
+ import { ArrowRight, BadgeCheck, Compass, FileText, Handshake, Search, SlidersHorizontal, TrendingUp } from "lucide-react";
+ import { useEffect, useState } from "react";
+-import { Link } from "react-router-dom";
++import { Link, useLocation, useNavigate } from "react-router-dom";
+ import { getListings } from "../../api/listings";
+ import SubscriptionPlans from "../../components/home/SubscriptionPlans";
+ import PhotoSlideshow from "../../components/layout/PhotoSlideshow";
+@@ -38,8 +38,30 @@ const aboutPoints = [
+ ];
+ 
+ export default function Home() {
++  const navigate = useNavigate();
++  const location = useLocation();
+   const [featured, setFeatured] = useState([]);
+   const [featuredLoading, setFeaturedLoading] = useState(true);
++  const [homeSearchQuery, setHomeSearchQuery] = useState("");
++
++  // Landing on "/" from elsewhere with a #section hash (e.g. clicking
++  // "About Us" or "Pricing" from another page) — React Router doesn't
++  // scroll to hash targets on client-side navigation the way a normal
++  // page load would, so do it manually once this page has rendered.
++  useEffect(() => {
++    if (!location.hash) return;
++    const id = location.hash.slice(1);
++    document.getElementById(id)?.scrollIntoView({
++      behavior: "smooth",
++      block: "start",
++    });
++  }, [location.hash]);
++
++  const handleHomeSearch = (e) => {
++    e.preventDefault();
++    const trimmed = homeSearchQuery.trim();
++    navigate(trimmed ? `/search?search=${encodeURIComponent(trimmed)}` : "/search");
++  };
+ 
+   useEffect(() => {
+     let cancelled = false;
+@@ -121,20 +143,22 @@ export default function Home() {
+         </div>
+ 
+         <form
+-          onSubmit={(e) => e.preventDefault()}
++          onSubmit={handleHomeSearch}
+           className="mt-6 flex items-center gap-2 rounded-full border border-border bg-surface px-2 py-2 shadow-sm"
+         >
+           <div className="flex flex-1 items-center gap-2 px-3">
+             <Search className="h-4 w-4 shrink-0 text-ink-soft" />
+             <input
+               type="text"
++              value={homeSearchQuery}
++              onChange={(e) => setHomeSearchQuery(e.target.value)}
+               placeholder="Search cafés, hotels, salons, services..."
+               className="w-full bg-transparent py-1.5 text-sm text-ink placeholder:text-ink-soft focus:outline-none"
+             />
+           </div>
+           <button
+             type="submit"
+-            aria-label="Filters"
++            aria-label="Search"
+             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white transition hover:bg-brand-700"
+           >
+             <SlidersHorizontal className="h-4 w-4" />
+@@ -267,7 +291,7 @@ export default function Home() {
+           flush against the site footer with no gap between them.
+           Background matches inspo's warm cream/golden tone instead of
+           the blue-tinted surface-sunken token used elsewhere. */}
+-      <section className="border-t border-border bg-gold-50 pt-16">
++      <section id="about" className="border-t border-border bg-gold-50 pt-16">
+         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 sm:px-6 md:grid-cols-2 md:items-start md:gap-16">
+           <div>
+             <div className="mb-3 flex items-center gap-2">
+diff --git a/frontend/src/pages/seller/SellerDashboard.jsx b/frontend/src/pages/seller/SellerDashboard.jsx
+index d47c0ce..af31a71 100644
+--- a/frontend/src/pages/seller/SellerDashboard.jsx
++++ b/frontend/src/pages/seller/SellerDashboard.jsx
+@@ -170,6 +170,7 @@ function OverviewListingRow({ listing }) {
+ }
+ 
+ function OverviewSection({ onNavigate }) {
++  const navigate = useNavigate();
+   const { user } = useAuth();
+ 
+   const { data, isLoading } = useQuery({
+@@ -244,7 +245,7 @@ function OverviewSection({ onNavigate }) {
+           </div>
+         ) : recentListings.length === 0 ? (
+           emptyState("No listings yet", "Create your first listing to get started.", (
+-            <Button size="sm" className="mt-4" onClick={() => onNavigate("add")}>Add Listing</Button>
++            <Button size="sm" className="mt-4" onClick={() => navigate("/sell/plans")}>Add Listing</Button>
+           ))
+         ) : (
+           <div>
+@@ -263,6 +264,7 @@ function OverviewSection({ onNavigate }) {
+ /* ------------------------------------------------------------------ */
+ 
+ function ListingsSection({ onNavigate }) {
++  const navigate = useNavigate();
+   const [showForm, setShowForm] = useState(false);
+   const [editingId, setEditingId] = useState(null);
+   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+@@ -367,24 +369,11 @@ function ListingsSection({ onNavigate }) {
+   }
+ 
+   function startCreate() {
+-    setEditingId(null);
+-    setForm({
+-      business_name: "",
+-      description: "",
+-      asking_price: "",
+-      category: "",
+-      region: "",
+-      city: "",
+-      area: "",
+-      address: "",
+-      phone: "",
+-      whatsapp: "",
+-      contact_email: "",
+-      website: "",
+-      status: "DRAFT",
+-    });
+-    setShowForm(true);
+-    setFormError("");
++    // A new listing always needs an active subscription/plan tied to it
++    // (confirmed in BusinessInformation.jsx / SubscriptionStatus.jsx) -
++    // route through plan selection instead of opening this inline form,
++    // which had no way to attach a plan and would 400 on submit.
++    navigate("/sell/plans");
+   }
+ 
+   function startEdit(listing) {

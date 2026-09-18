@@ -27,6 +27,29 @@ export default function Navbar() {
     });
   };
 
+  const scrollToAbout = () => {
+    setMobileMenuOpen(false);
+    document.getElementById("about")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
+  const handleAboutClick = () => {
+    setMobileMenuOpen(false);
+
+    if (isHome) {
+      // Already on the landing page — the About section is right there,
+      // just scroll to it.
+      scrollToAbout();
+    } else {
+      // No separate /about page exists — About is only ever content on
+      // the landing page, so go there and land on that section. Home.jsx
+      // watches for this hash on mount and scrolls to it.
+      navigate("/#about");
+    }
+  };
+
   const handlePricingClick = () => {
     setMobileMenuOpen(false);
 
@@ -186,12 +209,13 @@ export default function Navbar() {
               Browse
             </Link>
 
-            <Link
-              to="/about"
+            <button
+              type="button"
+              onClick={handleAboutClick}
               className={`text-sm font-medium transition-colors hover:underline hover:underline-offset-4 ${linkColor}`}
             >
               About Us
-            </Link>
+            </button>
 
             {/* Pricing */}
             <button
@@ -386,17 +410,17 @@ export default function Navbar() {
             </Link>
 
             {/* About Us */}
-            <Link
-              to="/about"
-              onClick={closeMobileMenu}
-              className={`flex items-center rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:underline hover:underline-offset-4 ${
+            <button
+              type="button"
+              onClick={handleAboutClick}
+              className={`flex w-full items-center rounded-lg px-3 py-3 text-left text-sm font-medium transition-colors hover:underline hover:underline-offset-4 ${
                 isHome
                   ? "text-white/90 hover:bg-white/10 hover:text-white"
                   : "text-ink-soft hover:bg-gray-50 hover:text-ink"
               }`}
             >
               About Us
-            </Link>
+            </button>
 
             {/* Pricing */}
             <button

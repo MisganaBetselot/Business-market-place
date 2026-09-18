@@ -1,0 +1,79 @@
+diff --git a/backend/listings/serializers.py b/backend/listings/serializers.py
+index 7949d90..9a2ba28 100644
+--- a/backend/listings/serializers.py
++++ b/backend/listings/serializers.py
+@@ -37,6 +37,7 @@ class BusinessListingSerializer(serializers.ModelSerializer):
+     )
+ 
+     images = serializers.SerializerMethodField()
++    video_url = serializers.SerializerMethodField()
+ 
+     def get_seller_name(self, obj):
+         first = (obj.seller.first_name or "").strip()
+@@ -68,6 +69,7 @@ class BusinessListingSerializer(serializers.ModelSerializer):
+             "created_at",
+             "updated_at",
+             "images",
++            "video_url",
+         ]
+ 
+         read_only_fields = [
+@@ -83,4 +85,27 @@ class BusinessListingSerializer(serializers.ModelSerializer):
+             status="APPROVED",
+             media_type="PHOTO"
+         ).order_by("created_at")
+-        return MediaSerializer(approved_media, many=True, context=self.context).data
+\ No newline at end of file
++        return MediaSerializer(approved_media, many=True, context=self.context).data
++
++    def get_video_url(self, obj):
++        """Return the most recent approved video for public listing, if any.
++
++        Video is submitted as a link (video_url), not an uploaded file —
++        confirmed against the seller media-upload flow, which always sends
++        VIDEO items with video_url set and no file. get_images() above
++        deliberately excludes VIDEO items, so this is the only place a
++        listing's video is exposed to the public detail page.
++        """
++        video = obj.media.filter(
++            status="APPROVED",
++            media_type="VIDEO",
++        ).order_by("-created_at").first()
++
++        if not video:
++            return None
++
++        if video.file_path:
++            request = self.context.get("request")
++            return request.build_absolute_uri(video.file_path.url) if request else video.file_path.url
++
++        return video.video_url
+\ No newline at end of file
+diff --git a/frontend/src/pages/public/BusinessDetails.jsx b/frontend/src/pages/public/BusinessDetails.jsx
+index 8868838..4d9cebd 100644
+--- a/frontend/src/pages/public/BusinessDetails.jsx
++++ b/frontend/src/pages/public/BusinessDetails.jsx
+@@ -1,4 +1,4 @@
+-import { Globe, Phone } from "lucide-react";
++import { Globe, Phone, PlayCircle } from "lucide-react";
+ import { useEffect, useState } from "react";
+ import { Link, useParams } from "react-router-dom";
+ import { getCategories } from "../../api/categories";
+@@ -125,6 +125,17 @@ const isOwnListing = String(user?.id) === String(listing.seller);
+             alt={listing.business_name || listing.title}
+             variant="full"
+           />
++          {listing.video_url && (
++            <a
++              href={listing.video_url}
++              target="_blank"
++              rel="noopener noreferrer"
++              className="mt-3 flex w-fit items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline"
++            >
++              <PlayCircle className="h-4 w-4" strokeWidth={1.75} />
++              Watch video
++            </a>
++          )}
+         </div>
+ 
+         {/* Right - Details */}

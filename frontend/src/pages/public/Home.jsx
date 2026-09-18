@@ -1,6 +1,6 @@
 import { ArrowRight, BadgeCheck, Compass, FileText, Handshake, Search, SlidersHorizontal, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { getListings } from "../../api/listings";
 import SubscriptionPlans from "../../components/home/SubscriptionPlans";
 import PhotoSlideshow from "../../components/layout/PhotoSlideshow";
@@ -38,8 +38,30 @@ const aboutPoints = [
 ];
 
 export default function Home() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [featured, setFeatured] = useState([]);
   const [featuredLoading, setFeaturedLoading] = useState(true);
+  const [homeSearchQuery, setHomeSearchQuery] = useState("");
+
+  // Landing on "/" from elsewhere with a #section hash (e.g. clicking
+  // "About Us" or "Pricing" from another page) — React Router doesn't
+  // scroll to hash targets on client-side navigation the way a normal
+  // page load would, so do it manually once this page has rendered.
+  useEffect(() => {
+    if (!location.hash) return;
+    const id = location.hash.slice(1);
+    document.getElementById(id)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [location.hash]);
+
+  const handleHomeSearch = (e) => {
+    e.preventDefault();
+    const trimmed = homeSearchQuery.trim();
+    navigate(trimmed ? `/search?search=${encodeURIComponent(trimmed)}` : "/search");
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -121,20 +143,22 @@ export default function Home() {
         </div>
 
         <form
-          onSubmit={(e) => e.preventDefault()}
+          onSubmit={handleHomeSearch}
           className="mt-6 flex items-center gap-2 rounded-full border border-border bg-surface px-2 py-2 shadow-sm"
         >
           <div className="flex flex-1 items-center gap-2 px-3">
             <Search className="h-4 w-4 shrink-0 text-ink-soft" />
             <input
               type="text"
+              value={homeSearchQuery}
+              onChange={(e) => setHomeSearchQuery(e.target.value)}
               placeholder="Search cafés, hotels, salons, services..."
               className="w-full bg-transparent py-1.5 text-sm text-ink placeholder:text-ink-soft focus:outline-none"
             />
           </div>
           <button
             type="submit"
-            aria-label="Filters"
+            aria-label="Search"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white transition hover:bg-brand-700"
           >
             <SlidersHorizontal className="h-4 w-4" />
@@ -267,7 +291,7 @@ export default function Home() {
           flush against the site footer with no gap between them.
           Background matches inspo's warm cream/golden tone instead of
           the blue-tinted surface-sunken token used elsewhere. */}
-      <section className="border-t border-border bg-gold-50 pt-16">
+      <section id="about" className="border-t border-border bg-gold-50 pt-16">
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 sm:px-6 md:grid-cols-2 md:items-start md:gap-16">
           <div>
             <div className="mb-3 flex items-center gap-2">
