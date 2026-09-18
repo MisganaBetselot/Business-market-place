@@ -1,12 +1,36 @@
-from django.db.models import Sum
+from django.db.models import Exists, OuterRef, Sum
 from django.http import Http404
+from django.utils import timezone
+
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from seller_subscriptions.models import SellerSubscription
+
 from .models import BusinessListing, SavedListing
 from .serializers import BusinessListingSerializer
+
+
+def public_listings_queryset():
+    now = timezone.now()
+
+    valid_subscription = SellerSubscription.objects.filter(
+        listing=OuterRef("pk"),
+        status=SellerSubscription.Status.ACTIVE,
+        expiry_date__gt=now,
+    )
+
+    return (
+        BusinessListing.objects.filter(
+            status=BusinessListing.Status.ACTIVE
+        )
+        .annotate(
+            has_valid_subscription=Exists(valid_subscription)
+        )
+        .filter(has_valid_subscription=True)
+    )
 
 
 class SavedListingListView(generics.ListAPIView):
@@ -14,9 +38,11 @@ class SavedListingListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return BusinessListing.objects.filter(
-            saved_by__user=self.request.user
-        ).order_by("-saved_by__created_at")
+        return (
+            public_listings_queryset()
+            .filter(saved_by__user=self.request.user)
+            .order_by("-saved_by__created_at")
+        )
 
 
 class SaveListingView(APIView):
@@ -74,17 +100,21 @@ class BusinessListingListCreateView(generics.ListCreateAPIView):
         return [IsAuthenticated()]
 
     def get_queryset(self):
-        user = self.request.user if self.request.user.is_authenticated else None
+        user = (
+            self.request.user
+            if self.request.user.is_authenticated
+            else None
+        )
 
         if user and getattr(user, "is_admin", False):
             return BusinessListing.objects.all().order_by("-created_at")
 
         if user and self.request.query_params.get("mine") == "true":
-            return BusinessListing.objects.filter(seller=user).order_by("-created_at")
+            return BusinessListing.objects.filter(
+                seller=user
+            ).order_by("-created_at")
 
-        return BusinessListing.objects.filter(
-            status=BusinessListing.Status.ACTIVE
-        ).order_by("-created_at")
+        return public_listings_queryset().order_by("-created_at")
 
     def perform_create(self, serializer):
         serializer.save(seller=self.request.user)
@@ -97,6 +127,7 @@ class BusinessListingDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_permissions(self):
         if self.request.method in ("GET", "HEAD", "OPTIONS"):
             return [AllowAny()]
+
         return [IsAuthenticated()]
 
     def get_queryset(self):
@@ -104,12 +135,32 @@ class BusinessListingDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_object(self):
         listing = super().get_object()
-        user = self.request.user if self.request.user.is_authenticated else None
 
+        user = (
+            self.request.user
+            if self.request.user.is_authenticated
+            else None
+        )
+
+        # Public users can only access an ACTIVE listing
+        # with a valid subscription.
         if listing.status == BusinessListing.Status.ACTIVE:
-            return listing
+            now = timezone.now()
 
-        if user and (user == listing.seller or getattr(user, "is_admin", False)):
+            has_valid_subscription = SellerSubscription.objects.filter(
+                listing=listing,
+                status=SellerSubscription.Status.ACTIVE,
+                expiry_date__gt=now,
+            ).exists()
+
+            if has_valid_subscription:
+                return listing
+
+        # Seller and admin can still access their own listings.
+        if user and (
+            user == listing.seller
+            or getattr(user, "is_admin", False)
+        ):
             return listing
 
         raise Http404
@@ -117,16 +168,32 @@ class BusinessListingDetailView(generics.RetrieveUpdateDestroyAPIView):
     def perform_update(self, serializer):
         listing = serializer.instance
         user = self.request.user
-        if not (user == listing.seller or getattr(user, "is_admin", False)):
+
+        if not (
+            user == listing.seller
+            or getattr(user, "is_admin", False)
+        ):
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Only the seller or an admin can update this listing.")
+
+            raise PermissionDenied(
+                "Only the seller or an admin can update this listing."
+            )
+
         serializer.save()
 
     def perform_destroy(self, instance):
         user = self.request.user
-        if not (user == instance.seller or getattr(user, "is_admin", False)):
+
+        if not (
+            user == instance.seller
+            or getattr(user, "is_admin", False)
+        ):
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Only the seller or an admin can delete this listing.")
+
+            raise PermissionDenied(
+                "Only the seller or an admin can delete this listing."
+            )
+
         instance.delete()
 
 
@@ -142,16 +209,30 @@ class RecordViewView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        user = request.user if request.user.is_authenticated else None
+        user = (
+            request.user
+            if request.user.is_authenticated
+            else None
+        )
+
         if user and user == listing.seller:
             return Response(
-                {"detail": "Sellers cannot record views for their own listings."},
+                {
+                    "detail": (
+                        "Sellers cannot record views for "
+                        "their own listings."
+                    )
+                },
                 status=status.HTTP_403_FORBIDDEN,
             )
 
         listing.views = (listing.views or 0) + 1
         listing.save(update_fields=["views"])
-        return Response({"views": listing.views}, status=status.HTTP_200_OK)
+
+        return Response(
+            {"views": listing.views},
+            status=status.HTTP_200_OK,
+        )
 
 
 class SellerOverviewView(APIView):
@@ -161,58 +242,102 @@ class SellerOverviewView(APIView):
         user = request.user
 
         listings = BusinessListing.objects.filter(seller=user)
+
         listing_counts = {
-            "draft": listings.filter(status=BusinessListing.Status.DRAFT).count(),
-            "active": listings.filter(status=BusinessListing.Status.ACTIVE).count(),
-            "sold": listings.filter(status=BusinessListing.Status.SOLD).count(),
-            "suspended": listings.filter(status=BusinessListing.Status.SUSPENDED).count(),
+            "draft": listings.filter(
+                status=BusinessListing.Status.DRAFT
+            ).count(),
+            "active": listings.filter(
+                status=BusinessListing.Status.ACTIVE
+            ).count(),
+            "sold": listings.filter(
+                status=BusinessListing.Status.SOLD
+            ).count(),
+            "suspended": listings.filter(
+                status=BusinessListing.Status.SUSPENDED
+            ).count(),
         }
 
-        total_views = listings.aggregate(total=Sum("views"))["total"] or 0
-        saved_businesses_count = SavedListing.objects.filter(user=user).count()
+        total_views = listings.aggregate(
+            total=Sum("views")
+        )["total"] or 0
+
+        saved_businesses_count = SavedListing.objects.filter(
+            user=user
+        ).count()
 
         unread_inquiries = 0
+
         try:
             from inquiries.models import Inquiry
-            unread_inquiries = Inquiry.objects.filter(seller=user, is_read=False).count()
+
+            unread_inquiries = Inquiry.objects.filter(
+                seller=user,
+                is_read=False,
+            ).count()
         except Exception:
             pass
 
         unread_notifications = 0
+
         try:
             from notifications.models import Notification
-            unread_notifications = Notification.objects.filter(user=user, is_read=False).count()
+
+            unread_notifications = Notification.objects.filter(
+                user=user,
+                is_read=False,
+            ).count()
         except Exception:
             pass
 
         subscription = None
         days_remaining = None
-        from seller_subscriptions.models import SellerSubscription
-        sub_qs = SellerSubscription.objects.filter(user=user).select_related("plan", "listing").order_by("-created_at")
-        active_sub = sub_qs.filter(status=SellerSubscription.Status.ACTIVE).first()
+
+        sub_qs = (
+            SellerSubscription.objects
+            .filter(user=user)
+            .select_related("plan", "listing")
+            .order_by("-created_at")
+        )
+
+        active_sub = sub_qs.filter(
+            status=SellerSubscription.Status.ACTIVE
+        ).first()
+
         if active_sub is None and sub_qs.exists():
             active_sub = sub_qs.first()
 
         if active_sub:
             subscription = {
                 "status": active_sub.status,
-                "expiry_date": active_sub.expiry_date.isoformat() if active_sub.expiry_date else None,
+                "expiry_date": (
+                    active_sub.expiry_date.isoformat()
+                    if active_sub.expiry_date
+                    else None
+                ),
             }
+
             if active_sub.expiry_date:
-                from django.utils import timezone as dj_tz
-                now = dj_tz.now()
+                now = timezone.now()
                 expiry = active_sub.expiry_date
+
                 if expiry.tzinfo is None:
-                    expiry = dj_tz.make_aware(expiry)
-                diff = (expiry - now).total_seconds() / 86400
+                    expiry = timezone.make_aware(expiry)
+
+                diff = (
+                    expiry - now
+                ).total_seconds() / 86400
+
                 days_remaining = max(int(diff), 0)
 
-        return Response({
-            "listing_counts": listing_counts,
-            "total_views": total_views,
-            "saved_businesses_count": saved_businesses_count,
-            "unread_inquiries": unread_inquiries,
-            "unread_notifications": unread_notifications,
-            "subscription": subscription,
-            "days_remaining": days_remaining,
-        })
+        return Response(
+            {
+                "listing_counts": listing_counts,
+                "total_views": total_views,
+                "saved_businesses_count": saved_businesses_count,
+                "unread_inquiries": unread_inquiries,
+                "unread_notifications": unread_notifications,
+                "subscription": subscription,
+                "days_remaining": days_remaining,
+            }
+        )

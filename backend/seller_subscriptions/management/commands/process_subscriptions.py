@@ -22,9 +22,7 @@ class Command(BaseCommand):
 
         for subscription in expired_subscriptions:
             subscription.status = SellerSubscription.Status.EXPIRED
-            subscription.save(
-                update_fields=["status", "updated_at"]
-            )
+            subscription.save(update_fields=["status", "updated_at"])
 
             Notification.objects.create(
                 user=subscription.user,

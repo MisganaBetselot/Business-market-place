@@ -62,7 +62,6 @@ class BusinessListingSerializer(serializers.ModelSerializer):
             "phone",
             "whatsapp",
             "contact_email",
-            "website",
             "status",
             "views",
             "created_at",

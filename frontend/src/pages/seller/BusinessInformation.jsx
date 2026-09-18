@@ -1,8 +1,8 @@
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { createListing } from "../../api/listings";
 import { getCategories } from "../../api/categories";
+import { createListing } from "../../api/listings";
 import { createSellerSubscription, getMySubscriptions, updateSellerSubscriptionPlan } from "../../api/sellerSubscriptions";
 
 export default function BusinessInformation() {
@@ -23,6 +23,7 @@ export default function BusinessInformation() {
     phone: "",
     whatsapp: "",
     contact_email: "",
+   
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -116,6 +117,7 @@ export default function BusinessInformation() {
           phone: form.phone || null,
           whatsapp: form.whatsapp || null,
           contact_email: form.contact_email || null,
+          
         });
         setCreatedListing(listing);
       }
@@ -514,6 +516,7 @@ export default function BusinessInformation() {
                   placeholder="business@example.com"
                 />
               </div>
+
 
               <div>
                 <label className={labelClass}>Description *</label>
