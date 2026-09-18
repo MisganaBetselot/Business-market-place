@@ -1,21 +1,26 @@
+import {
+  Heart,
+  Menu,
+  MessageCircle,
+  X
+} from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import {
-  MessageCircle,
-  Heart,
-  Store,
-  Menu,
-  X,
-} from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import Logo from "./Logo";
 
 export default function Navbar() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Chrome-style single-letter avatar: first name's initial, falling back
+  // to the email's initial if no name is set on the account.
+  const userInitial = (user?.first_name || user?.email || "?")
+    .charAt(0)
+    .toUpperCase();
 
   const isHome = location.pathname === "/";
 
@@ -117,13 +122,22 @@ export default function Navbar() {
             </span>
 
             {isAuthenticated ? (
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="font-medium text-white/90 transition-colors hover:text-white"
-              >
-                Log out
-              </button>
+              <div className="flex items-center gap-3">
+                <Link
+                  to="/account/profile"
+                  title="Your profile"
+                  className="flex h-6 w-6 items-center justify-center rounded-full bg-gold-500 text-[11px] font-semibold text-white transition-colors hover:bg-gold-400"
+                >
+                  {userInitial}
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="font-medium text-white/90 transition-colors hover:text-white"
+                >
+                  Log out
+                </button>
+              </div>
             ) : (
               <Link
                 to="/login"
@@ -143,13 +157,22 @@ export default function Navbar() {
             </span>
 
             {isAuthenticated ? (
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="font-medium text-white transition-colors hover:text-white/80"
-              >
-                Log out
-              </button>
+              <div className="flex items-center gap-3">
+                <Link
+                  to="/account/profile"
+                  title="Your profile"
+                  className="flex h-6 w-6 items-center justify-center rounded-full bg-gold-500 text-[11px] font-semibold text-white transition-colors hover:bg-gold-400"
+                >
+                  {userInitial}
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="font-medium text-white transition-colors hover:text-white/80"
+                >
+                  Log out
+                </button>
+              </div>
             ) : (
               <Link
                 to="/login"

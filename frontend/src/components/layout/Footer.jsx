@@ -1,5 +1,5 @@
+import { BedDouble, Coffee, Cookie, Dumbbell, Mail, MapPin, Phone, Scissors, ShoppingBag, UtensilsCrossed, Wrench } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Coffee, UtensilsCrossed, BedDouble, Scissors, Cookie, ShoppingBag, Wrench, Dumbbell } from "lucide-react";
 import { mockCategories } from "../../data/mockData";
 import Logo from "./Logo";
 
@@ -20,7 +20,7 @@ export default function Footer() {
   return (
     <footer className="mt-16 bg-brand-700">
       <div className="mx-auto max-w-6xl px-4 py-12">
-        <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-6">
           <div className="col-span-2 sm:col-span-3 lg:col-span-1">
             <Logo variant="light" />
             <p className="mt-3 max-w-xs text-sm text-white/70">
@@ -57,6 +57,28 @@ export default function Footer() {
             <Link to="/login" className="text-sm text-white/75 hover:text-white transition-colors">Log in</Link>
             <Link to="/register" className="text-sm text-white/75 hover:text-white transition-colors">Sign up</Link>
             <Link to="/account/profile" className="text-sm text-white/75 hover:text-white transition-colors">Your profile</Link>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-semibold text-gold-400">Contact</p>
+            <a
+              href="mailto:support@addisgebeya.com"
+              className="flex items-center gap-1.5 text-sm text-white/75 hover:text-white transition-colors"
+            >
+              <Mail className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+              support@addisgebeya.com
+            </a>
+            <a
+              href="tel:097654321"
+              className="flex items-center gap-1.5 text-sm text-white/75 hover:text-white transition-colors"
+            >
+              <Phone className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+              097 654 321
+            </a>
+            <span className="flex items-start gap-1.5 text-sm text-white/75">
+              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+              Sarbet, Addis Ababa, Ethiopia
+            </span>
           </div>
 
           <div className="flex flex-col gap-2">
